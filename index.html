@@ -3,9 +3,7 @@
 <title>TimeFlow</title>
 
 <!-- Installable app support -->
-<link rel="manifest" href="manifest.json">
-<link rel="icon" href="icons/favicon-32.png" sizes="32x32" type="image/png">
-<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="apple-touch-icon" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAALQAAAC0CAIAAACyr5FlAAAE4klEQVR4nO3dzXUbRxBF4aaP8lAA2jsY7RyZ81EUciZetA7PHBBvMD+NrlfV91tatNWouagBCZL++P3zRwOe+Sv6APBFHJCIAxJxQCIOSMQBiTggEQck4oBEHJCIAxJxQCIOSMQBiTggEQck4oBEHJCIAxJxQCIOSMQBiTggEQck4oD0LfoAAb7/++vav/jfP3+PPYm5j6V+HPJyFlvrJLLQbWVIGQP/O/5WiWPsFV2kj1XiwAVLxPGOJ/oKy2OJOHANcUAiDkjEAYk4IBEHJOKARByQiAPSEnG8433UFd6bXSIOXFP8+zkmvANSeIXUjCPkXbF6lVSLI/zN0kqJ1IkjPIutGolUiMMqi63sieSOwzaLrbyJZI0jRRZbGRNJGceoMg5esMl/nY98cdy5VEMuT/gBpskUh9tPqrmdZ7g0cVy4EtOugfPZ7sgRx9nph4w+xSFPSRDHqaGHTzzXafe5x3F81laDTnrsB9ZxHByx7Xyzn9/3+zmyT7ZN/zrKcKabI2MZ2zNvD5bxsXSOcRyZptsov5754YQZH5TdbSXjEJ+e+eEfHjmz2/3FK44yZTz9o3R9eMXxklsZZ+U6v1EcL580uSarvHwUPsvDJY6kZVy7kFn6sIijahk7x07Rh0UcJXkGfUp8HCXXxpEz+y+P+Dj2VS3j7EeGCI5j1JR9nD3z/sfHLg/3zWEofNtPExlHxrXxjjPbLg82xzCeNd8RFke9tXGH5/JgcxyVseabYuIoNughBzZcHmyOQ9b5DGXLLg7DtTFtz7k99oA4cj0Lfe6A8+dmtzngwysOt706f21YTcArDis+N5Qos+PI9YJDiSpj8vSMNofVczEwYp85GMXhgxtKRxznrFNGI46varwqGmJqHP5z97+hzJyhy+ZwmPu+mSc0mca36AO48N9q87lsjlhJfzzi3YiDMqTV4+BusmP1OF5adm004ti3chmNOLBj9Tju/JaE8laPo4kIKKMRR/eQAmV0fIX0D4L4is0BySUOvhi1ZTKNqXGwuu+bOUOXzQFDxAGJOCAZxWHyKiyczxxmx8Fr0jsmT89oc8CNVxw+GzWK1QS84oCVgDh42XHN/LnZbQ6rvTqZ22O3iwM+YuIw/LWK4Qx/EpPNASksDpbHluHaaGwO7IiMg+XRea6NxubAjuA4WB62a6OFx/FS7T7MH118HP7/B8038f/VD/FxwJZFHAsuD/+10UziaIv1kaKM5hNHW6aPLGU0qziOyN5HrvN7xXHkSZNrvltHTu6zNppbHK1uH+nKaK19/P75I/oMTxy8/G7TfCrvY7HbHN3BSfmvkLxlNNs4Wok+UpfRbG8rn45fe6sRJz32A/c42sndED7rXKfdlyCOdv7eETL0FIc8JUcc7dJri2nTdz7bHWniaDdee77pSridZ7hMcXR3Pj0ZclXCDzBNvjjauE9fJ3+2nKuMljSO5v3ljafSldHyxtGlSCRjFl3uODrbRPJm0VWIo7NKJHsWXZ04uvBEamTRVYujC0mkUhZdzTg+TaikXhOfisexNTCUwkFsLRTHg0pvn77JunHgJd/vBEM44oBEHJCIAxJxQCIOSMQBiTggEQck4oBEHJCIAxJxQCIOSMQBiTggEQck4oBEHJCIAxJxQCIOSMQBiTggEQck4oBEHJCIAxJxQPofqkn58lPJVqUAAAAASUVORK5CYII=">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -76,7 +74,13 @@
     overscroll-behavior-y: contain;
   }
   button, input { font-family: inherit; color: inherit; }
-  button { cursor: pointer; touch-action: manipulation; }
+  button {
+    cursor: pointer;
+    touch-action: manipulation;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
+  }
   h1, h2, h3, p { margin: 0; text-wrap: balance; }
   :focus-visible { outline: 2px solid var(--phase-c, var(--work)); outline-offset: 2px; }
 
@@ -330,16 +334,24 @@
     flex: 0 0 auto;
   }
   .stepper button {
-    width: 34px; height: 34px;
+    width: 36px; height: 36px;
     border-radius: 10px;
     border: 1px solid var(--border);
     background: var(--surface-2);
+    box-shadow: 0 1px 0 0 color-mix(in srgb, var(--border) 80%, transparent);
     font-size: 1.15rem;
+    line-height: 1;
     font-weight: 700;
     display: flex; align-items: center; justify-content: center;
     color: var(--text);
+    transition: transform .08s ease, background .08s ease, border-color .08s ease, box-shadow .08s ease;
   }
-  .stepper button:active { background: color-mix(in srgb, var(--work) 18%, var(--surface-2)); }
+  .stepper button:active {
+    background: color-mix(in srgb, var(--work) 18%, var(--surface-2));
+    border-color: var(--work);
+    box-shadow: none;
+    transform: scale(.88);
+  }
   .stepper .value {
     min-width: 62px;
     text-align: center;
