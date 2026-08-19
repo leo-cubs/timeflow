@@ -107,6 +107,7 @@
     flex: 0 0 auto;
   }
   .brand { display: flex; align-items: baseline; gap: .4rem; }
+  .topbar-actions { display: flex; align-items: center; gap: 8px; }
   .brand-mark {
     font-family: 'Big Shoulders Display', sans-serif;
     font-weight: 800;
@@ -133,6 +134,7 @@
   .icon-btn[aria-pressed="false"] { color: var(--muted); }
   .icon-btn.on { color: var(--phase-c); border-color: var(--phase-c); }
   .sound-icon { width: 19px; height: 19px; }
+  .topbar-icon { width: 19px; height: 19px; }
   .sound-icon .slash { opacity: 0; transition: opacity .15s ease; }
   .sound-icon .wave { opacity: 1; transition: opacity .15s ease; }
   .icon-btn.on .sound-icon .wave { opacity: 0; }
@@ -700,14 +702,22 @@
     <div class="brand">
       <span class="brand-mark">TimeFlow</span>
     </div>
-    <button class="icon-btn" id="muteBtn" aria-pressed="false" aria-label="Toggle sound">
-      <svg class="sound-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-        <path d="M4 9.5v5h3.5L13 19V5L7.5 9.5H4Z"/>
-        <path class="wave wave-1" d="M16.8 8.6a5 5 0 0 1 0 6.8"/>
-        <path class="wave wave-2" d="M19.3 6.2a8.6 8.6 0 0 1 0 11.6"/>
-        <path class="slash" d="M16.2 8.8 20.5 15.2M20.5 8.8 16.2 15.2"/>
-      </svg>
-    </button>
+    <div class="topbar-actions">
+      <button class="icon-btn" id="settingsBtn" aria-label="Open timer setup">
+        <svg class="topbar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="3"/>
+          <path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1"/>
+        </svg>
+      </button>
+      <button class="icon-btn" id="muteBtn" aria-pressed="false" aria-label="Toggle sound">
+        <svg class="sound-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M4 9.5v5h3.5L13 19V5L7.5 9.5H4Z"/>
+          <path class="wave wave-1" d="M16.8 8.6a5 5 0 0 1 0 6.8"/>
+          <path class="wave wave-2" d="M19.3 6.2a8.6 8.6 0 0 1 0 11.6"/>
+          <path class="slash" d="M16.2 8.8 20.5 15.2M20.5 8.8 16.2 15.2"/>
+        </svg>
+      </button>
+    </div>
   </header>
 
   <main class="view timer-view" id="timerView">
@@ -873,13 +883,6 @@
       </svg>
       <span>Meet</span>
     </button>
-    <button class="tab" data-view="setup">
-      <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-        <circle cx="12" cy="12" r="3"/>
-        <path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1"/>
-      </svg>
-      <span>Setup</span>
-    </button>
   </nav>
 </div>
 
@@ -922,6 +925,7 @@
   var resetBtn = document.getElementById("resetBtn");
   var skipBtn = document.getElementById("skipBtn");
   var muteBtn = document.getElementById("muteBtn");
+  var settingsBtn = document.getElementById("settingsBtn");
   var liveRegion = document.getElementById("liveRegion");
 
   var workVal = document.getElementById("workVal");
@@ -1223,19 +1227,25 @@
 
   // ---------- Tabs ----------
   var tabs = document.querySelectorAll(".tab");
+
+  function showView(v) {
+    timerView.hidden = v !== "timer";
+    setupView.hidden = v !== "setup";
+    meetView.hidden = v !== "meet";
+    muteBtn.hidden = v === "meet";
+    settingsBtn.hidden = v === "meet";
+    // Setup is reached from the Timer screen, so the tab bar (which has
+    // no Setup entry of its own) keeps showing Timer as active for it.
+    var tabTarget = v === "setup" ? "timer" : v;
+    tabs.forEach(function (t) { t.classList.toggle("active", t.dataset.view === tabTarget); });
+    if (v === "setup") syncSetupFields();
+    if (v === "meet") openMeet();
+  }
+
   tabs.forEach(function (t) {
-    t.addEventListener("click", function () {
-      tabs.forEach(function (o) { o.classList.remove("active"); });
-      t.classList.add("active");
-      var v = t.dataset.view;
-      timerView.hidden = v !== "timer";
-      setupView.hidden = v !== "setup";
-      meetView.hidden = v !== "meet";
-      muteBtn.hidden = v === "meet";
-      if (v === "setup") syncSetupFields();
-      if (v === "meet") openMeet();
-    });
+    t.addEventListener("click", function () { showView(t.dataset.view); });
   });
+  settingsBtn.addEventListener("click", function () { showView("setup"); });
 
   // ---------- Meet: city database ----------
   var CITY_DB = [
