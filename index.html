@@ -1,0 +1,1825 @@
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;700;800;900&family=Archivo:wght@400;500;600;700;800&display=swap">
+<title>Rounds</title>
+
+<style>
+  :root {
+    --bg: #f1f3f7;
+    --surface: #ffffff;
+    --surface-2: #e7eaf1;
+    --text: #171a21;
+    --muted: #5b6172;
+    --border: #d7dbe4;
+    --work: #e05a2b;
+    --work-strong: #c94a1f;
+    --rest: #12897a;
+    --rest-strong: #0d6d61;
+    --ok: #b3791b;
+    --danger: #c73434;
+    --on-accent: #fff9f5;
+    --shadow: 0 1px 2px rgba(23,26,33,.04), 0 8px 24px -12px rgba(23,26,33,.18);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0f121a;
+      --surface: #1a1e29;
+      --surface-2: #232837;
+      --text: #eef0f5;
+      --muted: #8b93a6;
+      --border: #2a3040;
+      --work: #ff7847;
+      --work-strong: #ff8f5c;
+      --rest: #35d6c3;
+      --rest-strong: #57e0cf;
+      --ok: #e0a53d;
+      --danger: #ff6b6b;
+      --on-accent: #14100c;
+      --shadow: 0 1px 2px rgba(0,0,0,.3), 0 12px 32px -14px rgba(0,0,0,.6);
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0f121a;
+    --surface: #1a1e29;
+    --surface-2: #232837;
+    --text: #eef0f5;
+    --muted: #8b93a6;
+    --border: #2a3040;
+    --work: #ff7847;
+    --work-strong: #ff8f5c;
+    --rest: #35d6c3;
+    --rest-strong: #57e0cf;
+    --ok: #e0a53d;
+    --danger: #ff6b6b;
+    --on-accent: #14100c;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 12px 32px -14px rgba(0,0,0,.6);
+  }
+
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Archivo', ui-sans-serif, system-ui, sans-serif;
+    overscroll-behavior-y: contain;
+  }
+  button, input { font-family: inherit; color: inherit; }
+  button { cursor: pointer; touch-action: manipulation; }
+  h1, h2, h3, p { margin: 0; text-wrap: balance; }
+  :focus-visible { outline: 2px solid var(--phase-c, var(--work)); outline-offset: 2px; }
+
+  .app {
+    --phase-c: var(--muted);
+    display: flex;
+    flex-direction: column;
+    min-height: 100dvh;
+    max-width: 480px;
+    margin: 0 auto;
+    background: var(--bg);
+    position: relative;
+  }
+  .app[data-phase="work"] { --phase-c: var(--work); }
+  .app[data-phase="rest"] { --phase-c: var(--rest); }
+  .app[data-phase="done"] { --phase-c: var(--work); }
+
+  /* ---------- Topbar ---------- */
+  .topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: max(14px, env(safe-area-inset-top)) 16px 10px;
+    flex: 0 0 auto;
+  }
+  .brand { display: flex; align-items: baseline; gap: .4rem; }
+  .brand-mark {
+    font-family: 'Big Shoulders Display', sans-serif;
+    font-weight: 800;
+    font-size: 1.35rem;
+    letter-spacing: .01em;
+  }
+  .brand-sub {
+    font-size: .68rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: .14em;
+    font-weight: 600;
+  }
+  .icon-btn {
+    width: 40px; height: 40px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.05rem;
+    color: var(--muted);
+    transition: color .15s ease, border-color .15s ease;
+  }
+  .icon-btn[aria-pressed="false"] { color: var(--muted); }
+  .icon-btn.on { color: var(--phase-c); border-color: var(--phase-c); }
+  .sound-icon { width: 19px; height: 19px; }
+  .sound-icon .slash { opacity: 0; transition: opacity .15s ease; }
+  .sound-icon .wave { opacity: 1; transition: opacity .15s ease; }
+  .icon-btn.on .sound-icon .wave { opacity: 0; }
+  .icon-btn.on .sound-icon .slash { opacity: 1; }
+
+  /* ---------- Views ---------- */
+  .view { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+  [hidden] { display: none !important; }
+
+  /* ---------- Timer view ---------- */
+  .timer-view {
+    align-items: center;
+    justify-content: flex-start;
+    padding: 10px 20px 18px;
+    gap: 22px;
+  }
+
+  .preset-name {
+    text-align: center;
+    font-weight: 700;
+    font-size: .95rem;
+    color: var(--text);
+    max-width: 90%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .phase-pill {
+    padding: .38rem 1rem;
+    border-radius: 999px;
+    text-transform: uppercase;
+    letter-spacing: .16em;
+    font-weight: 700;
+    font-size: .74rem;
+    color: var(--phase-c);
+    background: color-mix(in srgb, var(--phase-c) 14%, transparent);
+    border: 1px solid color-mix(in srgb, var(--phase-c) 35%, transparent);
+    transition: color .25s ease, background .25s ease, border-color .25s ease;
+  }
+
+  .stage {
+    position: relative;
+    width: min(82vw, 340px);
+    aspect-ratio: 1;
+    margin: 0 auto;
+  }
+  .stage::before {
+    content: "";
+    position: absolute;
+    inset: -15%;
+    z-index: -1;
+    border-radius: 50%;
+    background: radial-gradient(circle, color-mix(in srgb, var(--phase-c) 24%, transparent) 0%, transparent 68%);
+    transition: background .3s ease;
+  }
+  .ring { width: 100%; height: 100%; transform: rotate(-90deg); }
+  .ring-track {
+    fill: none;
+    stroke: var(--surface-2);
+    stroke-width: 10;
+  }
+  .ring-progress {
+    fill: none;
+    stroke: var(--phase-c);
+    stroke-width: 10;
+    stroke-linecap: round;
+    transition: stroke .25s ease;
+  }
+  .time-display {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Big Shoulders Display', sans-serif;
+    font-weight: 800;
+    font-size: clamp(3rem, 15vw, 4.6rem);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: .01em;
+    color: var(--text);
+  }
+  .time-display.warn { color: var(--phase-c); }
+  @media (prefers-reduced-motion: no-preference) {
+    .time-display.warn { animation: pulseText .5s ease-in-out infinite; }
+  }
+  @keyframes pulseText {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.055); }
+  }
+
+  .rep-block { display: flex; flex-direction: column; align-items: center; gap: 8px; width: 100%; }
+  .rep-row {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 7px;
+    max-width: 300px;
+  }
+  .rep-dot {
+    width: 9px; height: 9px;
+    border-radius: 50%;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    transition: background .2s ease, border-color .2s ease, transform .2s ease;
+  }
+  .rep-dot.done { background: var(--phase-c); border-color: var(--phase-c); opacity: .45; }
+  .rep-dot.current {
+    background: var(--phase-c);
+    border-color: var(--phase-c);
+    transform: scale(1.5);
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .rep-dot.current { animation: dotPulse 1s ease-in-out infinite; }
+  }
+  @keyframes dotPulse {
+    0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--phase-c) 45%, transparent); }
+    50% { box-shadow: 0 0 0 5px color-mix(in srgb, var(--phase-c) 0%, transparent); }
+  }
+  .rep-caption {
+    font-size: .82rem;
+    color: var(--muted);
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+  .rep-caption strong { color: var(--text); font-weight: 700; }
+  .next-hint {
+    font-size: .74rem;
+    color: var(--muted);
+    font-weight: 500;
+  }
+  .next-hint b { color: var(--muted); font-weight: 700; }
+
+  .controls {
+    display: flex;
+    gap: 10px;
+    width: 100%;
+    max-width: 380px;
+    flex: 0 0 auto;
+    margin-top: auto;
+  }
+  .ctrl-btn {
+    flex: 1;
+    min-height: 56px;
+    border-radius: 16px;
+    font-weight: 700;
+    font-size: .95rem;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text);
+    box-shadow: var(--shadow);
+    transition: transform .08s ease, background .15s ease, color .15s ease, border-color .15s ease;
+  }
+  .ctrl-btn:active { transform: scale(.96); }
+  .ctrl-btn.primary {
+    background: var(--phase-c);
+    border-color: var(--phase-c);
+    color: var(--on-accent);
+    flex: 1.4;
+  }
+  .ctrl-btn.ghost { background: transparent; box-shadow: none; }
+  .ctrl-btn:disabled { opacity: .4; }
+
+  /* ---------- Setup view ---------- */
+  .setup-view { overflow-y: auto; padding: 4px 16px calc(20px + env(safe-area-inset-bottom)); gap: 20px; display: flex; flex-direction: column; }
+  .setup-header { padding: 10px 2px 0; }
+  .setup-header h1 {
+    font-family: 'Big Shoulders Display', sans-serif;
+    font-weight: 800;
+    font-size: 1.6rem;
+  }
+  .setup-header p { color: var(--muted); font-size: .85rem; margin-top: 2px; }
+
+  .section-label {
+    font-size: .72rem;
+    text-transform: uppercase;
+    letter-spacing: .13em;
+    font-weight: 700;
+    color: var(--muted);
+    padding: 0 2px;
+  }
+
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; overflow: hidden; }
+
+  .stepper-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 13px 14px;
+    gap: 10px;
+  }
+  .stepper-row + .stepper-row { border-top: 1px solid var(--border); }
+  .stepper-row .label { font-weight: 600; font-size: .92rem; }
+  .stepper-row .caption { font-size: .74rem; color: var(--muted); margin-top: 1px; }
+  .stepper {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: 0 0 auto;
+  }
+  .stepper button {
+    width: 34px; height: 34px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: var(--surface-2);
+    font-size: 1.15rem;
+    font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--text);
+  }
+  .stepper button:active { background: color-mix(in srgb, var(--work) 18%, var(--surface-2)); }
+  .stepper .value {
+    min-width: 62px;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+    font-weight: 700;
+    font-size: 1rem;
+  }
+
+  .total-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 14px;
+    background: var(--surface-2);
+    border-radius: 14px;
+    font-size: .85rem;
+  }
+  .total-row .val { font-weight: 800; font-variant-numeric: tabular-nums; font-size: 1rem; }
+
+  .name-row { display: flex; gap: 8px; }
+  .name-row input {
+    flex: 1;
+    min-width: 0;
+    padding: 12px 14px;
+    border-radius: 14px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    font-size: .92rem;
+    font-weight: 600;
+  }
+  .name-row input::placeholder { color: var(--muted); font-weight: 500; }
+  .save-btn {
+    padding: 0 18px;
+    border-radius: 14px;
+    border: 1px solid var(--work);
+    background: var(--work);
+    color: var(--on-accent);
+    font-weight: 700;
+    font-size: .88rem;
+    white-space: nowrap;
+  }
+  .save-btn:active { transform: scale(.97); }
+
+  .preset-list { display: flex; flex-direction: column; gap: 8px; }
+  .preset-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 12px 14px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+  }
+  .preset-card.active { border-color: var(--work); background: color-mix(in srgb, var(--work) 7%, var(--surface)); }
+  .preset-main { min-width: 0; flex: 1; text-align: left; background: none; border: none; padding: 0; color: inherit; }
+  .preset-main .pname { font-weight: 700; font-size: .92rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .preset-main .pmeta { font-size: .75rem; color: var(--muted); margin-top: 2px; font-variant-numeric: tabular-nums; }
+  .preset-del {
+    width: 34px; height: 34px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: var(--surface-2);
+    color: var(--muted);
+    font-size: .95rem;
+    flex: 0 0 auto;
+  }
+  .preset-del.confirm { background: var(--danger); border-color: var(--danger); color: #fff; font-size: .68rem; font-weight: 700; width: auto; padding: 0 10px; }
+  .empty-note { color: var(--muted); font-size: .82rem; padding: 6px 2px; }
+
+  /* ---------- Tab bar ---------- */
+  .tabbar {
+    flex: 0 0 auto;
+    display: flex;
+    border-top: 1px solid var(--border);
+    background: var(--surface);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .tab {
+    flex: 1;
+    background: none;
+    border: none;
+    padding: 11px 0 9px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    color: var(--muted);
+    font-weight: 600;
+    font-size: .72rem;
+    letter-spacing: .02em;
+    border-top: 2px solid transparent;
+  }
+  .tab-icon { width: 21px; height: 21px; }
+  .tab.active { color: var(--work); border-top-color: var(--work); }
+
+  .sr-only {
+    position: absolute; width: 1px; height: 1px;
+    padding: 0; margin: -1px; overflow: hidden;
+    clip: rect(0,0,0,0); white-space: nowrap; border: 0;
+  }
+
+  /* ---------- Meet view ---------- */
+  .meet-view { overflow-y: auto; padding: 4px 16px calc(20px + env(safe-area-inset-bottom)); gap: 20px; display: flex; flex-direction: column; }
+  .meet-header { padding: 10px 2px 0; }
+  .meet-header h1 {
+    font-family: 'Big Shoulders Display', sans-serif;
+    font-weight: 800;
+    font-size: 1.6rem;
+  }
+  .meet-header p { color: var(--muted); font-size: .85rem; margin-top: 2px; }
+
+  .meet-summary {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 14px 12px 16px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+  }
+  .meet-time-pick {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 8px;
+    border-radius: 12px;
+    cursor: pointer;
+  }
+  .meet-time-pick:active { background: var(--surface-2); }
+  .meet-time-pick:focus-within { background: var(--surface-2); }
+  .meet-time-big {
+    font-family: 'Big Shoulders Display', sans-serif;
+    font-weight: 800;
+    font-size: clamp(2.6rem, 13vw, 3.4rem);
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
+  .meet-time-edit {
+    width: 17px; height: 17px;
+    color: var(--muted);
+    flex: 0 0 auto;
+  }
+  .meet-time-input {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    border: none;
+    padding: 0;
+    margin: 0;
+  }
+  .meet-date-sub { font-size: .82rem; color: var(--muted); font-weight: 600; }
+  .meet-actions { display: flex; gap: 8px; margin-top: 10px; }
+  .chip-btn {
+    padding: 8px 16px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: var(--surface-2);
+    color: var(--text);
+    font-weight: 700;
+    font-size: .82rem;
+  }
+  .chip-btn:active { transform: scale(.96); }
+  .chip-btn.accent { background: var(--work); border-color: var(--work); color: var(--on-accent); }
+
+  .meet-add { position: relative; }
+  .meet-add input {
+    width: 100%;
+    padding: 12px 14px;
+    border-radius: 14px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    font-size: .92rem;
+    font-weight: 600;
+  }
+  .meet-add input::placeholder { color: var(--muted); font-weight: 500; }
+  .city-dropdown {
+    position: absolute;
+    left: 0; right: 0; top: calc(100% + 6px);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    box-shadow: var(--shadow);
+    max-height: 230px;
+    overflow-y: auto;
+    z-index: 5;
+  }
+  .city-option {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+    width: 100%;
+    text-align: left;
+    background: none;
+    border: none;
+    padding: 10px 14px;
+    color: inherit;
+    font-size: .88rem;
+    font-weight: 600;
+  }
+  .city-option + .city-option { border-top: 1px solid var(--border); }
+  .city-option:active { background: var(--surface-2); }
+  .city-option .cmeta { font-size: .72rem; color: var(--muted); font-weight: 500; white-space: nowrap; }
+  .city-empty { padding: 14px; font-size: .82rem; color: var(--muted); }
+
+  .meet-timeline {
+    position: relative;
+    display: grid;
+    grid-template-columns: 100px 1fr;
+    row-gap: 14px;
+    column-gap: 10px;
+    padding-top: 2px;
+  }
+  .meet-ticks {
+    grid-column: 2;
+    display: flex;
+    justify-content: space-between;
+    font-size: .62rem;
+    color: var(--muted);
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+  #meetRows { display: contents; }
+  .meet-row { display: contents; }
+  .meet-city-label {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 2px;
+    min-width: 0;
+  }
+  .mcl-top { display: flex; align-items: center; gap: 5px; }
+  .mcl-name {
+    font-size: .82rem;
+    font-weight: 700;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .mcl-home {
+    flex: 0 0 auto;
+    font-size: .6rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    color: var(--work);
+    background: color-mix(in srgb, var(--work) 14%, transparent);
+    padding: 1px 5px;
+    border-radius: 5px;
+  }
+  .mcl-del {
+    flex: 0 0 auto;
+    width: 20px; height: 20px;
+    border-radius: 6px;
+    border: none;
+    background: none;
+    color: var(--muted);
+    font-size: .78rem;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .mcl-time { font-size: 1.05rem; font-weight: 800; font-variant-numeric: tabular-nums; }
+  .mcl-meta { font-size: .68rem; color: var(--muted); font-weight: 600; display: flex; align-items: center; gap: 5px; }
+  .mcl-daybadge {
+    font-size: .6rem;
+    font-weight: 700;
+    color: var(--muted);
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    padding: 0 4px;
+    border-radius: 4px;
+  }
+
+  .meet-strip {
+    position: relative;
+    height: 34px;
+    border-radius: 9px;
+    overflow: hidden;
+    display: flex;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+  }
+  .strip-seg { flex: 1; height: 100%; }
+  .strip-seg.good { background: color-mix(in srgb, var(--rest) 60%, transparent); }
+  .strip-seg.ok { background: color-mix(in srgb, var(--ok) 42%, transparent); }
+  .strip-seg + .strip-seg { border-left: 1px solid color-mix(in srgb, var(--border) 60%, transparent); }
+
+  .meet-now-marker {
+    position: absolute;
+    top: 0;
+    width: 0;
+    border-left: 1.5px dashed color-mix(in srgb, var(--muted) 65%, transparent);
+    pointer-events: none;
+  }
+  .meet-playhead {
+    position: absolute;
+    top: 0;
+    height: 100%;
+    width: 2px;
+    background: var(--work);
+    pointer-events: none;
+    border-radius: 1px;
+  }
+  .meet-playhead .grip {
+    position: absolute;
+    top: -3px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    background: var(--work);
+    border: 2px solid var(--surface);
+    box-shadow: var(--shadow);
+  }
+  .meet-drag-surface {
+    position: absolute;
+    top: 0;
+    touch-action: pan-y;
+    cursor: grab;
+  }
+
+  .meet-legend {
+    display: flex;
+    gap: 16px;
+    justify-content: center;
+    font-size: .74rem;
+    color: var(--muted);
+    font-weight: 600;
+  }
+  .meet-legend span { display: flex; align-items: center; gap: 6px; }
+  .meet-legend .dot { width: 8px; height: 8px; border-radius: 50%; }
+  .meet-legend .dot.good { background: var(--rest); }
+  .meet-legend .dot.ok { background: var(--ok); }
+  .meet-legend .dot.bad { background: var(--border); }
+
+  .meet-empty-note { color: var(--muted); font-size: .82rem; text-align: center; padding: 10px 2px; }
+</style>
+
+<div class="app" id="app" data-phase="idle">
+
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-mark">Rounds</span>
+    </div>
+    <button class="icon-btn" id="muteBtn" aria-pressed="false" aria-label="Toggle sound">
+      <svg class="sound-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M4 9.5v5h3.5L13 19V5L7.5 9.5H4Z"/>
+        <path class="wave wave-1" d="M16.8 8.6a5 5 0 0 1 0 6.8"/>
+        <path class="wave wave-2" d="M19.3 6.2a8.6 8.6 0 0 1 0 11.6"/>
+        <path class="slash" d="M16.2 8.8 20.5 15.2M20.5 8.8 16.2 15.2"/>
+      </svg>
+    </button>
+  </header>
+
+  <main class="view timer-view" id="timerView">
+    <div class="preset-name" id="presetLabel">Custom setup</div>
+    <div class="phase-pill" id="phasePill">Ready</div>
+
+    <div class="stage">
+      <svg class="ring" viewBox="0 0 300 300" aria-hidden="true">
+        <circle class="ring-track" cx="150" cy="150" r="135"></circle>
+        <circle class="ring-progress" id="ringProgress" cx="150" cy="150" r="135"
+                stroke-dasharray="848.23" stroke-dashoffset="0"></circle>
+      </svg>
+      <div class="time-display" id="timeDisplay">00:45</div>
+    </div>
+
+    <div class="rep-block">
+      <div class="rep-row" id="repRow"></div>
+      <div class="rep-caption" id="repCaption">Rep <strong>1</strong> of <strong>8</strong></div>
+      <div class="next-hint" id="nextHint">Next: Rest · 0:15</div>
+    </div>
+
+    <div class="controls">
+      <button class="ctrl-btn ghost" id="resetBtn">Reset</button>
+      <button class="ctrl-btn primary" id="startBtn">Start</button>
+      <button class="ctrl-btn ghost" id="skipBtn">Skip</button>
+    </div>
+
+    <div class="sr-only" id="liveRegion" aria-live="polite"></div>
+  </main>
+
+  <main class="view setup-view" id="setupView" hidden>
+    <div class="setup-header">
+      <h1>Setup</h1>
+      <p>Dial in your work, rest and rep counts, then save it for next time.</p>
+    </div>
+
+    <div>
+      <div class="section-label" style="margin-bottom:8px;">Timing</div>
+      <div class="card">
+        <div class="stepper-row">
+          <div>
+            <div class="label">Work interval</div>
+            <div class="caption">Time per rep</div>
+          </div>
+          <div class="stepper" data-field="work">
+            <button data-dir="-1" aria-label="Decrease work interval">−</button>
+            <span class="value" id="workVal">0:45</span>
+            <button data-dir="1" aria-label="Increase work interval">+</button>
+          </div>
+        </div>
+        <div class="stepper-row">
+          <div>
+            <div class="label">Rest interval</div>
+            <div class="caption">Between reps</div>
+          </div>
+          <div class="stepper" data-field="rest">
+            <button data-dir="-1" aria-label="Decrease rest interval">−</button>
+            <span class="value" id="restVal">0:15</span>
+            <button data-dir="1" aria-label="Increase rest interval">+</button>
+          </div>
+        </div>
+        <div class="stepper-row">
+          <div>
+            <div class="label">Repetitions</div>
+            <div class="caption">Number of rounds</div>
+          </div>
+          <div class="stepper" data-field="reps">
+            <button data-dir="-1" aria-label="Decrease repetitions">−</button>
+            <span class="value" id="repsVal">8</span>
+            <button data-dir="1" aria-label="Increase repetitions">+</button>
+          </div>
+        </div>
+        <div class="stepper-row">
+          <div>
+            <div class="label">Warning cue</div>
+            <div class="caption">Beep in the final seconds</div>
+          </div>
+          <div class="stepper" data-field="warn">
+            <button data-dir="-1" aria-label="Decrease warning seconds">−</button>
+            <span class="value" id="warnVal">3s</span>
+            <button data-dir="1" aria-label="Increase warning seconds">+</button>
+          </div>
+        </div>
+      </div>
+      <div class="total-row" style="margin-top:8px;">
+        <span>Total workout time</span>
+        <span class="val" id="totalVal">6:15</span>
+      </div>
+    </div>
+
+    <div>
+      <div class="section-label" style="margin-bottom:8px;">Save this setup</div>
+      <div class="name-row">
+        <input type="text" id="nameInput" placeholder="e.g. Sprint intervals" maxlength="40">
+        <button class="save-btn" id="saveBtn">Save</button>
+      </div>
+    </div>
+
+    <div>
+      <div class="section-label" style="margin-bottom:8px;">Saved setups</div>
+      <div class="preset-list" id="presetList"></div>
+      <div class="empty-note" id="emptyNote" hidden>No saved setups yet — configure one above and tap Save.</div>
+    </div>
+  </main>
+
+  <main class="view meet-view" id="meetView" hidden>
+    <div class="meet-header">
+      <h1>Meet</h1>
+      <p>Drag the bar to find a time that works everywhere.</p>
+    </div>
+
+    <div class="meet-summary">
+      <div class="meet-time-pick" id="meetTimePick">
+        <div class="meet-time-big" id="meetBigTime">–:––</div>
+        <svg class="meet-time-edit" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/>
+        </svg>
+        <input type="time" class="meet-time-input" id="meetTimeInput" step="900" aria-label="Set exact meeting time">
+      </div>
+      <div class="meet-date-sub" id="meetDateSub">–</div>
+      <div class="meet-actions">
+        <button class="chip-btn" id="meetNowBtn">Now</button>
+        <button class="chip-btn accent" id="meetBestBtn">Best time</button>
+      </div>
+    </div>
+
+    <div class="meet-add">
+      <input type="text" id="citySearch" placeholder="Add a city…" autocomplete="off" aria-label="Add a city">
+      <div class="city-dropdown" id="cityDropdown" hidden></div>
+    </div>
+
+    <div class="meet-timeline" id="meetTimeline">
+      <div class="meet-ticks" id="meetTicks"></div>
+      <div id="meetRows"></div>
+      <div class="meet-now-marker" id="meetNowMarker" hidden></div>
+      <div class="meet-drag-surface" id="meetDragSurface">
+        <div class="meet-playhead" id="meetPlayhead"><span class="grip"></span></div>
+      </div>
+    </div>
+    <div class="meet-empty-note" id="meetEmptyNote" hidden>Add another city to compare overlapping hours.</div>
+
+    <div class="meet-legend">
+      <span><i class="dot good"></i>Core hours</span>
+      <span><i class="dot ok"></i>Early / late</span>
+      <span><i class="dot bad"></i>Asleep</span>
+    </div>
+  </main>
+
+  <nav class="tabbar">
+    <button class="tab active" data-view="timer">
+      <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <line x1="10" y1="2" x2="14" y2="2"/>
+        <line x1="12" y1="14" x2="15" y2="11"/>
+        <circle cx="12" cy="14" r="8"/>
+      </svg>
+      <span>Timer</span>
+    </button>
+    <button class="tab" data-view="meet">
+      <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <circle cx="12" cy="12" r="10"/>
+        <path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/>
+        <path d="M2 12h20"/>
+      </svg>
+      <span>Meet</span>
+    </button>
+    <button class="tab" data-view="setup">
+      <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <circle cx="12" cy="12" r="3"/>
+        <path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1"/>
+      </svg>
+      <span>Setup</span>
+    </button>
+  </nav>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  // ---------- Persistence ----------
+  var LS_CONFIG = "rounds.config.v1";
+  var LS_PRESETS = "rounds.presets.v1";
+  var LS_MUTE = "rounds.muted.v1";
+
+  function loadJSON(key, fallback) {
+    try {
+      var raw = localStorage.getItem(key);
+      return raw ? JSON.parse(raw) : fallback;
+    } catch (e) { return fallback; }
+  }
+  function saveJSON(key, val) {
+    try { localStorage.setItem(key, JSON.stringify(val)); } catch (e) {}
+  }
+
+  var DEFAULT_CONFIG = { name: "Custom setup", work: 45, rest: 15, reps: 8, warn: 3, presetId: null };
+  var config = loadJSON(LS_CONFIG, DEFAULT_CONFIG);
+  var presets = loadJSON(LS_PRESETS, []);
+  var muted = loadJSON(LS_MUTE, false);
+
+  // ---------- DOM refs ----------
+  var app = document.getElementById("app");
+  var timerView = document.getElementById("timerView");
+  var setupView = document.getElementById("setupView");
+  var presetLabel = document.getElementById("presetLabel");
+  var phasePill = document.getElementById("phasePill");
+  var timeDisplay = document.getElementById("timeDisplay");
+  var ringProgress = document.getElementById("ringProgress");
+  var repRow = document.getElementById("repRow");
+  var repCaption = document.getElementById("repCaption");
+  var nextHint = document.getElementById("nextHint");
+  var startBtn = document.getElementById("startBtn");
+  var resetBtn = document.getElementById("resetBtn");
+  var skipBtn = document.getElementById("skipBtn");
+  var muteBtn = document.getElementById("muteBtn");
+  var liveRegion = document.getElementById("liveRegion");
+
+  var workVal = document.getElementById("workVal");
+  var restVal = document.getElementById("restVal");
+  var repsVal = document.getElementById("repsVal");
+  var warnVal = document.getElementById("warnVal");
+  var totalVal = document.getElementById("totalVal");
+  var nameInput = document.getElementById("nameInput");
+  var saveBtn = document.getElementById("saveBtn");
+  var presetList = document.getElementById("presetList");
+  var emptyNote = document.getElementById("emptyNote");
+
+  var meetView = document.getElementById("meetView");
+  var meetBigTime = document.getElementById("meetBigTime");
+  var meetTimeInput = document.getElementById("meetTimeInput");
+  var meetDateSub = document.getElementById("meetDateSub");
+  var meetNowBtn = document.getElementById("meetNowBtn");
+  var meetBestBtn = document.getElementById("meetBestBtn");
+  var citySearch = document.getElementById("citySearch");
+  var cityDropdown = document.getElementById("cityDropdown");
+  var meetTimeline = document.getElementById("meetTimeline");
+  var meetTicks = document.getElementById("meetTicks");
+  var meetRows = document.getElementById("meetRows");
+  var meetPlayhead = document.getElementById("meetPlayhead");
+  var meetDragSurface = document.getElementById("meetDragSurface");
+  var meetNowMarker = document.getElementById("meetNowMarker");
+  var meetEmptyNote = document.getElementById("meetEmptyNote");
+
+  var RING_R = 135;
+  var RING_C = 2 * Math.PI * RING_R;
+  ringProgress.setAttribute("stroke-dasharray", RING_C.toFixed(2));
+
+  // ---------- Format helpers ----------
+  function fmt(sec) {
+    sec = Math.max(0, Math.round(sec));
+    var m = Math.floor(sec / 60);
+    var s = sec % 60;
+    return m + ":" + (s < 10 ? "0" : "") + s;
+  }
+
+  // ---------- Audio ----------
+  var actx = null;
+  function ensureAudio() {
+    if (!actx) {
+      var AC = window.AudioContext || window.webkitAudioContext;
+      if (AC) actx = new AC();
+    }
+    if (actx && actx.state === "suspended") actx.resume();
+    return actx;
+  }
+  function tone(freq, duration, type, gainPeak, delay) {
+    if (muted) return;
+    var ctx = ensureAudio();
+    if (!ctx) return;
+    var t0 = ctx.currentTime + (delay || 0);
+    var osc = ctx.createOscillator();
+    var gain = ctx.createGain();
+    osc.type = type || "sine";
+    osc.frequency.setValueAtTime(freq, t0);
+    gain.gain.setValueAtTime(0, t0);
+    gain.gain.linearRampToValueAtTime(gainPeak || 0.22, t0 + 0.015);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t0 + duration);
+    osc.connect(gain).connect(ctx.destination);
+    osc.start(t0);
+    osc.stop(t0 + duration + 0.02);
+  }
+  function beepWarn() { tone(1046, 0.11, "square", 0.16); }
+  function toneToWork() { tone(660, 0.09, "sine", 0.24); tone(880, 0.14, "sine", 0.22, 0.1); }
+  function toneToRest() { tone(520, 0.16, "sine", 0.2); }
+  function toneDone() {
+    tone(660, 0.12, "sine", 0.22, 0);
+    tone(880, 0.12, "sine", 0.22, 0.13);
+    tone(1108, 0.22, "sine", 0.24, 0.26);
+  }
+
+  // ---------- Wake lock ----------
+  var wakeLock = null;
+  function requestWake() {
+    if (!("wakeLock" in navigator)) return;
+    navigator.wakeLock.request("screen").then(function (wl) {
+      wakeLock = wl;
+    }).catch(function () {});
+  }
+  function releaseWake() {
+    if (wakeLock) { wakeLock.release().catch(function () {}); wakeLock = null; }
+  }
+  document.addEventListener("visibilitychange", function () {
+    if (document.visibilityState === "visible" && runtime.running && !wakeLock) requestWake();
+  });
+
+  // ---------- Runtime state ----------
+  var runtime = {
+    phase: "idle",       // idle | work | rest | done
+    currentRep: 1,
+    remainingMs: config.work * 1000,
+    endTime: 0,
+    running: false,
+    lastWarnSecond: null,
+    intervalId: null
+  };
+
+  function phaseTotalMs() {
+    return (runtime.phase === "rest" ? config.rest : config.work) * 1000;
+  }
+
+  function setPhaseAttr(p) { app.setAttribute("data-phase", p); }
+
+  function renderPresetLabel() {
+    presetLabel.textContent = config.name || "Custom setup";
+  }
+
+  function buildRepRow() {
+    repRow.innerHTML = "";
+    var n = config.reps;
+    var compact = n > 14;
+    if (compact) {
+      repRow.style.display = "none";
+    } else {
+      repRow.style.display = "flex";
+      for (var i = 1; i <= n; i++) {
+        var d = document.createElement("div");
+        d.className = "rep-dot";
+        d.dataset.i = i;
+        repRow.appendChild(d);
+      }
+    }
+  }
+
+  function updateRepVisual() {
+    var dots = repRow.children;
+    for (var i = 0; i < dots.length; i++) {
+      var idx = i + 1;
+      dots[i].className = "rep-dot" +
+        (idx < runtime.currentRep || runtime.phase === "done" ? " done" : "") +
+        (idx === runtime.currentRep && runtime.phase !== "done" ? " current" : "");
+    }
+    repCaption.innerHTML = runtime.phase === "done"
+      ? "Workout complete — <strong>" + config.reps + "</strong> reps"
+      : "Rep <strong>" + Math.min(runtime.currentRep, config.reps) + "</strong> of <strong>" + config.reps + "</strong>";
+    nextHint.innerHTML = nextHintText();
+  }
+
+  function nextHintText() {
+    if (runtime.phase === "idle") return "Work · " + fmt(config.work) + (config.rest > 0 ? " → Rest · " + fmt(config.rest) : "");
+    if (runtime.phase === "done") return "&nbsp;";
+    if (runtime.phase === "work") {
+      if (runtime.currentRep >= config.reps) return "Next: <b>Finish</b>";
+      return config.rest > 0 ? "Next: Rest · " + fmt(config.rest) : "Next: Rep " + (runtime.currentRep + 1) + " · " + fmt(config.work);
+    }
+    return "Next: Work · " + fmt(config.work);
+  }
+
+  function updateRing() {
+    if (runtime.phase === "done") {
+      ringProgress.setAttribute("stroke-dashoffset", "0");
+      return;
+    }
+    var total = phaseTotalMs();
+    var frac = total > 0 ? 1 - (runtime.remainingMs / total) : 1;
+    frac = Math.max(0, Math.min(1, frac));
+    ringProgress.setAttribute("stroke-dashoffset", (RING_C * frac).toFixed(2));
+  }
+
+  function updatePillAndTime() {
+    var labelMap = { idle: "Ready", work: "Work", rest: "Rest", done: "Done" };
+    phasePill.textContent = labelMap[runtime.phase];
+    var secs = runtime.phase === "idle" ? config.work : Math.ceil(runtime.remainingMs / 1000);
+    timeDisplay.textContent = fmt(secs);
+  }
+
+  function render() {
+    setPhaseAttr(runtime.phase);
+    updatePillAndTime();
+    updateRing();
+    updateRepVisual();
+    startBtn.textContent = runtime.phase === "done" ? "Restart"
+      : runtime.running ? "Pause" : (runtime.phase === "idle" ? "Start" : "Resume");
+    skipBtn.disabled = runtime.phase === "idle" || runtime.phase === "done";
+    resetBtn.disabled = runtime.phase === "idle";
+  }
+
+  function announce(msg) { liveRegion.textContent = msg; }
+
+  // ---------- Engine ----------
+  function startTimer() {
+    ensureAudio();
+    if (runtime.phase === "idle" || runtime.phase === "done") {
+      runtime.phase = "work";
+      runtime.currentRep = 1;
+      runtime.remainingMs = config.work * 1000;
+      runtime.lastWarnSecond = null;
+      announce("Work, rep 1 of " + config.reps);
+    }
+    runtime.endTime = Date.now() + runtime.remainingMs;
+    runtime.running = true;
+    requestWake();
+    clearInterval(runtime.intervalId);
+    runtime.intervalId = setInterval(tick, 100);
+    render();
+  }
+
+  function pauseTimer() {
+    runtime.running = false;
+    runtime.remainingMs = Math.max(0, runtime.endTime - Date.now());
+    clearInterval(runtime.intervalId);
+    releaseWake();
+    render();
+  }
+
+  function resetTimer() {
+    runtime.running = false;
+    clearInterval(runtime.intervalId);
+    releaseWake();
+    runtime.phase = "idle";
+    runtime.currentRep = 1;
+    runtime.remainingMs = config.work * 1000;
+    runtime.lastWarnSecond = null;
+    timeDisplay.classList.remove("warn");
+    render();
+  }
+
+  function advancePhase() {
+    if (runtime.phase === "work") {
+      if (runtime.currentRep >= config.reps) {
+        runtime.phase = "done";
+        runtime.remainingMs = 0;
+        runtime.running = false;
+        clearInterval(runtime.intervalId);
+        releaseWake();
+        timeDisplay.classList.remove("warn");
+        toneDone();
+        announce("Workout complete");
+        render();
+        return;
+      }
+      if (config.rest > 0) {
+        runtime.phase = "rest";
+        runtime.remainingMs = config.rest * 1000;
+        toneToRest();
+        announce("Rest");
+      } else {
+        runtime.currentRep += 1;
+        runtime.remainingMs = config.work * 1000;
+        toneToWork();
+        announce("Work, rep " + runtime.currentRep + " of " + config.reps);
+      }
+    } else if (runtime.phase === "rest") {
+      runtime.currentRep += 1;
+      runtime.phase = "work";
+      runtime.remainingMs = config.work * 1000;
+      toneToWork();
+      announce("Work, rep " + runtime.currentRep + " of " + config.reps);
+    }
+    runtime.lastWarnSecond = null;
+    runtime.endTime = Date.now() + runtime.remainingMs;
+    render();
+  }
+
+  function tick() {
+    if (!runtime.running) return;
+    var remaining = runtime.endTime - Date.now();
+    if (remaining <= 0) {
+      runtime.remainingMs = 0;
+      advancePhase();
+      return;
+    }
+    runtime.remainingMs = remaining;
+    var secsLeft = Math.ceil(remaining / 1000);
+    if (config.warn > 0 && secsLeft <= config.warn && secsLeft !== runtime.lastWarnSecond) {
+      runtime.lastWarnSecond = secsLeft;
+      beepWarn();
+    }
+    timeDisplay.classList.toggle("warn", config.warn > 0 && secsLeft <= config.warn);
+    updatePillAndTime();
+    updateRing();
+  }
+
+  function skipPhase() {
+    if (runtime.phase === "idle" || runtime.phase === "done") return;
+    advancePhase();
+  }
+
+  // ---------- Controls ----------
+  startBtn.addEventListener("click", function () {
+    if (runtime.phase === "done") { resetTimer(); startTimer(); return; }
+    if (runtime.running) pauseTimer(); else startTimer();
+  });
+  resetBtn.addEventListener("click", resetTimer);
+  skipBtn.addEventListener("click", skipPhase);
+
+  muteBtn.addEventListener("click", function () {
+    muted = !muted;
+    saveJSON(LS_MUTE, muted);
+    muteBtn.setAttribute("aria-pressed", String(muted));
+    muteBtn.setAttribute("aria-label", muted ? "Unmute sound" : "Mute sound");
+    muteBtn.classList.toggle("on", muted);
+    if (!muted) ensureAudio();
+  });
+
+  // ---------- Tabs ----------
+  var tabs = document.querySelectorAll(".tab");
+  tabs.forEach(function (t) {
+    t.addEventListener("click", function () {
+      tabs.forEach(function (o) { o.classList.remove("active"); });
+      t.classList.add("active");
+      var v = t.dataset.view;
+      timerView.hidden = v !== "timer";
+      setupView.hidden = v !== "setup";
+      meetView.hidden = v !== "meet";
+      muteBtn.hidden = v === "meet";
+      if (v === "setup") syncSetupFields();
+      if (v === "meet") openMeet();
+    });
+  });
+
+  // ---------- Meet: city database ----------
+  var CITY_DB = [
+    { id: "los_angeles", name: "Los Angeles", country: "US", tz: "America/Los_Angeles" },
+    { id: "denver", name: "Denver", country: "US", tz: "America/Denver" },
+    { id: "chicago", name: "Chicago", country: "US", tz: "America/Chicago" },
+    { id: "new_york", name: "New York", country: "US", tz: "America/New_York" },
+    { id: "toronto", name: "Toronto", country: "CA", tz: "America/Toronto" },
+    { id: "vancouver", name: "Vancouver", country: "CA", tz: "America/Vancouver" },
+    { id: "mexico_city", name: "Mexico City", country: "MX", tz: "America/Mexico_City" },
+    { id: "bogota", name: "Bogotá", country: "CO", tz: "America/Bogota" },
+    { id: "lima", name: "Lima", country: "PE", tz: "America/Lima" },
+    { id: "santiago", name: "Santiago", country: "CL", tz: "America/Santiago" },
+    { id: "buenos_aires", name: "Buenos Aires", country: "AR", tz: "America/Argentina/Buenos_Aires" },
+    { id: "sao_paulo", name: "São Paulo", country: "BR", tz: "America/Sao_Paulo" },
+    { id: "honolulu", name: "Honolulu", country: "US", tz: "Pacific/Honolulu" },
+    { id: "anchorage", name: "Anchorage", country: "US", tz: "America/Anchorage" },
+    { id: "london", name: "London", country: "UK", tz: "Europe/London" },
+    { id: "dublin", name: "Dublin", country: "IE", tz: "Europe/Dublin" },
+    { id: "lisbon", name: "Lisbon", country: "PT", tz: "Europe/Lisbon" },
+    { id: "madrid", name: "Madrid", country: "ES", tz: "Europe/Madrid" },
+    { id: "paris", name: "Paris", country: "FR", tz: "Europe/Paris" },
+    { id: "brussels", name: "Brussels", country: "BE", tz: "Europe/Brussels" },
+    { id: "amsterdam", name: "Amsterdam", country: "NL", tz: "Europe/Amsterdam" },
+    { id: "berlin", name: "Berlin", country: "DE", tz: "Europe/Berlin" },
+    { id: "zurich", name: "Zurich", country: "CH", tz: "Europe/Zurich" },
+    { id: "rome", name: "Rome", country: "IT", tz: "Europe/Rome" },
+    { id: "vienna", name: "Vienna", country: "AT", tz: "Europe/Vienna" },
+    { id: "warsaw", name: "Warsaw", country: "PL", tz: "Europe/Warsaw" },
+    { id: "stockholm", name: "Stockholm", country: "SE", tz: "Europe/Stockholm" },
+    { id: "helsinki", name: "Helsinki", country: "FI", tz: "Europe/Helsinki" },
+    { id: "athens", name: "Athens", country: "GR", tz: "Europe/Athens" },
+    { id: "istanbul", name: "Istanbul", country: "TR", tz: "Europe/Istanbul" },
+    { id: "moscow", name: "Moscow", country: "RU", tz: "Europe/Moscow" },
+    { id: "cairo", name: "Cairo", country: "EG", tz: "Africa/Cairo" },
+    { id: "lagos", name: "Lagos", country: "NG", tz: "Africa/Lagos" },
+    { id: "nairobi", name: "Nairobi", country: "KE", tz: "Africa/Nairobi" },
+    { id: "johannesburg", name: "Johannesburg", country: "ZA", tz: "Africa/Johannesburg" },
+    { id: "casablanca", name: "Casablanca", country: "MA", tz: "Africa/Casablanca" },
+    { id: "dubai", name: "Dubai", country: "AE", tz: "Asia/Dubai" },
+    { id: "tel_aviv", name: "Tel Aviv", country: "IL", tz: "Asia/Jerusalem" },
+    { id: "riyadh", name: "Riyadh", country: "SA", tz: "Asia/Riyadh" },
+    { id: "tehran", name: "Tehran", country: "IR", tz: "Asia/Tehran" },
+    { id: "karachi", name: "Karachi", country: "PK", tz: "Asia/Karachi" },
+    { id: "mumbai", name: "Mumbai", country: "IN", tz: "Asia/Kolkata" },
+    { id: "new_delhi", name: "New Delhi", country: "IN", tz: "Asia/Kolkata" },
+    { id: "dhaka", name: "Dhaka", country: "BD", tz: "Asia/Dhaka" },
+    { id: "bangkok", name: "Bangkok", country: "TH", tz: "Asia/Bangkok" },
+    { id: "jakarta", name: "Jakarta", country: "ID", tz: "Asia/Jakarta" },
+    { id: "singapore", name: "Singapore", country: "SG", tz: "Asia/Singapore" },
+    { id: "hong_kong", name: "Hong Kong", country: "HK", tz: "Asia/Hong_Kong" },
+    { id: "shanghai", name: "Shanghai", country: "CN", tz: "Asia/Shanghai" },
+    { id: "beijing", name: "Beijing", country: "CN", tz: "Asia/Shanghai" },
+    { id: "taipei", name: "Taipei", country: "TW", tz: "Asia/Taipei" },
+    { id: "seoul", name: "Seoul", country: "KR", tz: "Asia/Seoul" },
+    { id: "tokyo", name: "Tokyo", country: "JP", tz: "Asia/Tokyo" },
+    { id: "manila", name: "Manila", country: "PH", tz: "Asia/Manila" },
+    { id: "kuala_lumpur", name: "Kuala Lumpur", country: "MY", tz: "Asia/Kuala_Lumpur" },
+    { id: "perth", name: "Perth", country: "AU", tz: "Australia/Perth" },
+    { id: "sydney", name: "Sydney", country: "AU", tz: "Australia/Sydney" },
+    { id: "melbourne", name: "Melbourne", country: "AU", tz: "Australia/Melbourne" },
+    { id: "brisbane", name: "Brisbane", country: "AU", tz: "Australia/Brisbane" },
+    { id: "auckland", name: "Auckland", country: "NZ", tz: "Pacific/Auckland" },
+    { id: "wellington", name: "Wellington", country: "NZ", tz: "Pacific/Auckland" },
+    { id: "suva", name: "Suva", country: "FJ", tz: "Pacific/Fiji" },
+    { id: "port_moresby", name: "Port Moresby", country: "PG", tz: "Pacific/Port_Moresby" },
+    { id: "ottawa", name: "Ottawa", country: "CA", tz: "America/Toronto" },
+    { id: "washington_dc", name: "Washington, D.C.", country: "US", tz: "America/New_York" },
+    { id: "miami", name: "Miami", country: "US", tz: "America/New_York" },
+    { id: "boston", name: "Boston", country: "US", tz: "America/New_York" },
+    { id: "houston", name: "Houston", country: "US", tz: "America/Chicago" },
+    { id: "phoenix", name: "Phoenix", country: "US", tz: "America/Phoenix" },
+    { id: "seattle", name: "Seattle", country: "US", tz: "America/Los_Angeles" },
+    { id: "san_francisco", name: "San Francisco", country: "US", tz: "America/Los_Angeles" },
+    { id: "caracas", name: "Caracas", country: "VE", tz: "America/Caracas" },
+    { id: "san_salvador", name: "San Salvador", country: "SV", tz: "America/El_Salvador" },
+    { id: "guatemala_city", name: "Guatemala City", country: "GT", tz: "America/Guatemala" },
+    { id: "tegucigalpa", name: "Tegucigalpa", country: "HN", tz: "America/Tegucigalpa" },
+    { id: "managua", name: "Managua", country: "NI", tz: "America/Managua" },
+    { id: "san_jose", name: "San José", country: "CR", tz: "America/Costa_Rica" },
+    { id: "panama_city", name: "Panama City", country: "PA", tz: "America/Panama" },
+    { id: "havana", name: "Havana", country: "CU", tz: "America/Havana" },
+    { id: "santo_domingo", name: "Santo Domingo", country: "DO", tz: "America/Santo_Domingo" },
+    { id: "san_juan", name: "San Juan", country: "PR", tz: "America/Puerto_Rico" },
+    { id: "kingston", name: "Kingston", country: "JM", tz: "America/Jamaica" },
+    { id: "quito", name: "Quito", country: "EC", tz: "America/Guayaquil" },
+    { id: "la_paz", name: "La Paz", country: "BO", tz: "America/La_Paz" },
+    { id: "asuncion", name: "Asunción", country: "PY", tz: "America/Asuncion" },
+    { id: "montevideo", name: "Montevideo", country: "UY", tz: "America/Montevideo" },
+    { id: "reykjavik", name: "Reykjavik", country: "IS", tz: "Atlantic/Reykjavik" },
+    { id: "copenhagen", name: "Copenhagen", country: "DK", tz: "Europe/Copenhagen" },
+    { id: "oslo", name: "Oslo", country: "NO", tz: "Europe/Oslo" },
+    { id: "kyiv", name: "Kyiv", country: "UA", tz: "Europe/Kyiv" },
+    { id: "bucharest", name: "Bucharest", country: "RO", tz: "Europe/Bucharest" },
+    { id: "sofia", name: "Sofia", country: "BG", tz: "Europe/Sofia" },
+    { id: "budapest", name: "Budapest", country: "HU", tz: "Europe/Budapest" },
+    { id: "prague", name: "Prague", country: "CZ", tz: "Europe/Prague" },
+    { id: "belgrade", name: "Belgrade", country: "RS", tz: "Europe/Belgrade" },
+    { id: "zagreb", name: "Zagreb", country: "HR", tz: "Europe/Zagreb" },
+    { id: "riga", name: "Riga", country: "LV", tz: "Europe/Riga" },
+    { id: "vilnius", name: "Vilnius", country: "LT", tz: "Europe/Vilnius" },
+    { id: "tallinn", name: "Tallinn", country: "EE", tz: "Europe/Tallinn" },
+    { id: "addis_ababa", name: "Addis Ababa", country: "ET", tz: "Africa/Addis_Ababa" },
+    { id: "accra", name: "Accra", country: "GH", tz: "Africa/Accra" },
+    { id: "dakar", name: "Dakar", country: "SN", tz: "Africa/Dakar" },
+    { id: "kinshasa", name: "Kinshasa", country: "CD", tz: "Africa/Kinshasa" },
+    { id: "algiers", name: "Algiers", country: "DZ", tz: "Africa/Algiers" },
+    { id: "tunis", name: "Tunis", country: "TN", tz: "Africa/Tunis" },
+    { id: "khartoum", name: "Khartoum", country: "SD", tz: "Africa/Khartoum" },
+    { id: "kampala", name: "Kampala", country: "UG", tz: "Africa/Kampala" },
+    { id: "dar_es_salaam", name: "Dar es Salaam", country: "TZ", tz: "Africa/Dar_es_Salaam" },
+    { id: "harare", name: "Harare", country: "ZW", tz: "Africa/Harare" },
+    { id: "baghdad", name: "Baghdad", country: "IQ", tz: "Asia/Baghdad" },
+    { id: "amman", name: "Amman", country: "JO", tz: "Asia/Amman" },
+    { id: "beirut", name: "Beirut", country: "LB", tz: "Asia/Beirut" },
+    { id: "doha", name: "Doha", country: "QA", tz: "Asia/Qatar" },
+    { id: "kuwait_city", name: "Kuwait City", country: "KW", tz: "Asia/Kuwait" },
+    { id: "muscat", name: "Muscat", country: "OM", tz: "Asia/Muscat" },
+    { id: "kathmandu", name: "Kathmandu", country: "NP", tz: "Asia/Kathmandu" },
+    { id: "colombo", name: "Colombo", country: "LK", tz: "Asia/Colombo" },
+    { id: "ulaanbaatar", name: "Ulaanbaatar", country: "MN", tz: "Asia/Ulaanbaatar" },
+    { id: "hanoi", name: "Hanoi", country: "VN", tz: "Asia/Ho_Chi_Minh" },
+    { id: "phnom_penh", name: "Phnom Penh", country: "KH", tz: "Asia/Phnom_Penh" },
+    { id: "yangon", name: "Yangon", country: "MM", tz: "Asia/Yangon" },
+    { id: "almaty", name: "Almaty", country: "KZ", tz: "Asia/Almaty" },
+    { id: "tashkent", name: "Tashkent", country: "UZ", tz: "Asia/Tashkent" }
+  ];
+
+  // ---------- Meet: state ----------
+  var LS_MEET_CITIES = "rounds.meet.cities.v1";
+  var HOME_TZ = (Intl.DateTimeFormat().resolvedOptions().timeZone) || "UTC";
+  var meetSelected = [];
+  var windowStart = null;
+  var playheadMin = 0;
+  var meetInitialized = false;
+  var meetDragging = false;
+  var fmtCache = {};
+
+  function buildHomeCityEntry() {
+    var found = CITY_DB.find(function (c) { return c.tz === HOME_TZ; });
+    if (found) return { id: found.id, name: found.name, country: found.country, tz: found.tz, isHome: true };
+    var label = HOME_TZ.split("/").pop().replace(/_/g, " ");
+    return { id: "__home__", name: label || "Your location", country: "", tz: HOME_TZ, isHome: true };
+  }
+
+  function loadMeetCities() {
+    var home = buildHomeCityEntry();
+    var list = [home];
+    var savedIds = loadJSON(LS_MEET_CITIES, null);
+    if (savedIds && savedIds.length) {
+      savedIds.forEach(function (id) {
+        if (id === home.id) return;
+        var c = CITY_DB.find(function (x) { return x.id === id; });
+        if (c) list.push({ id: c.id, name: c.name, country: c.country, tz: c.tz, isHome: false });
+      });
+    } else {
+      var def = CITY_DB.find(function (c) { return c.tz !== home.tz && (c.id === "london" || c.id === "new_york"); });
+      if (def) list.push({ id: def.id, name: def.name, country: def.country, tz: def.tz, isHome: false });
+    }
+    return list;
+  }
+
+  function persistMeetCities() {
+    var ids = meetSelected.filter(function (c) { return !c.isHome; }).map(function (c) { return c.id; });
+    saveJSON(LS_MEET_CITIES, ids);
+  }
+
+  function getWindowStart() {
+    var d = new Date();
+    d.setHours(0, 0, 0, 0);
+    return d;
+  }
+
+  function nowMinutes() {
+    return Math.round((Date.now() - windowStart.getTime()) / 60000);
+  }
+
+  function clampPlayhead(m) { return Math.max(0, Math.min(1439, m)); }
+  function instantAt(min) { return new Date(windowStart.getTime() + min * 60000); }
+  function pad2(n) { return (n < 10 ? "0" : "") + n; }
+
+  function getTimeFormatter(tz) {
+    var key = "t:" + tz;
+    if (!fmtCache[key]) fmtCache[key] = new Intl.DateTimeFormat("en-US", { timeZone: tz, hour: "numeric", minute: "numeric", hour12: false });
+    return fmtCache[key];
+  }
+  function localHourFloat(date, tz) {
+    var parts = getTimeFormatter(tz).formatToParts(date);
+    var hh = 0, mm = 0;
+    for (var i = 0; i < parts.length; i++) {
+      if (parts[i].type === "hour") hh = parseInt(parts[i].value, 10);
+      else if (parts[i].type === "minute") mm = parseInt(parts[i].value, 10);
+    }
+    if (hh === 24) hh = 0;
+    return hh + mm / 60;
+  }
+  function getDateFormatter(tz) {
+    var key = "d:" + tz;
+    if (!fmtCache[key]) fmtCache[key] = new Intl.DateTimeFormat("en-US", { timeZone: tz, year: "numeric", month: "2-digit", day: "2-digit" });
+    return fmtCache[key];
+  }
+  function ymdParts(date, tz) {
+    var parts = getDateFormatter(tz).formatToParts(date);
+    var o = {};
+    for (var i = 0; i < parts.length; i++) o[parts[i].type] = parts[i].value;
+    return o;
+  }
+  function dayShift(date, tz, homeTz) {
+    var a = ymdParts(date, homeTz), b = ymdParts(date, tz);
+    var da = Date.UTC(+a.year, +a.month - 1, +a.day);
+    var db = Date.UTC(+b.year, +b.month - 1, +b.day);
+    return Math.round((db - da) / 86400000);
+  }
+  function getFullFormatter(tz) {
+    var key = "f:" + tz;
+    if (!fmtCache[key]) fmtCache[key] = new Intl.DateTimeFormat("en-US", { timeZone: tz, hour12: false, year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit" });
+    return fmtCache[key];
+  }
+  function tzOffsetMinutes(date, tz) {
+    var parts = getFullFormatter(tz).formatToParts(date);
+    var o = {};
+    for (var i = 0; i < parts.length; i++) o[parts[i].type] = parts[i].value;
+    var asUTC = Date.UTC(+o.year, +o.month - 1, +o.day, (+o.hour === 24 ? 0 : +o.hour), +o.minute, +o.second);
+    return Math.round((asUTC - date.getTime()) / 60000);
+  }
+  function fmtOffset(mins) {
+    var sign = mins < 0 ? "−" : "+";
+    var abs = Math.abs(mins);
+    var h = Math.floor(abs / 60), m = abs % 60;
+    return "UTC" + sign + h + (m ? ":" + pad2(m) : "");
+  }
+  function bucketFor(hourFloat) {
+    if (hourFloat >= 9 && hourFloat < 19) return "good";
+    if ((hourFloat >= 7 && hourFloat < 9) || (hourFloat >= 19 && hourFloat < 22)) return "ok";
+    return "bad";
+  }
+
+  function buildCityBuckets(city) {
+    var dtf = getTimeFormatter(city.tz);
+    var buckets = [];
+    for (var h = 0; h < 24; h++) {
+      var t = new Date(windowStart.getTime() + h * 3600000 + 1800000);
+      var parts = dtf.formatToParts(t);
+      var hh = 0, mm = 0;
+      for (var i = 0; i < parts.length; i++) {
+        if (parts[i].type === "hour") hh = parseInt(parts[i].value, 10);
+        else if (parts[i].type === "minute") mm = parseInt(parts[i].value, 10);
+      }
+      if (hh === 24) hh = 0;
+      buckets.push(bucketFor(hh + mm / 60));
+    }
+    return buckets;
+  }
+
+  function buildTicks() {
+    var labels = ["12a", "3a", "6a", "9a", "12p", "3p", "6p", "9p"];
+    meetTicks.innerHTML = labels.map(function (l) { return "<span>" + l + "</span>"; }).join("");
+  }
+
+  function cityRowHTML(city) {
+    var buckets = buildCityBuckets(city);
+    var segHtml = buckets.map(function (b) { return '<div class="strip-seg ' + b + '"></div>'; }).join("");
+    var delBtn = city.isHome ? "" : '<button type="button" class="mcl-del" data-id="' + city.id + '" aria-label="Remove ' + city.name + '">✕</button>';
+    var homeTag = city.isHome ? '<span class="mcl-home">You</span>' : "";
+    return '' +
+      '<div class="meet-row" data-id="' + city.id + '">' +
+      '<div class="meet-city-label">' +
+      '<div class="mcl-top"><span class="mcl-name">' + city.name + '</span>' + homeTag + delBtn + '</div>' +
+      '<div class="mcl-time" data-time-for="' + city.id + '">--:--</div>' +
+      '<div class="mcl-meta"><span data-offset-for="' + city.id + '"></span><span class="mcl-daybadge" data-day-for="' + city.id + '" hidden></span></div>' +
+      '</div>' +
+      '<div class="meet-strip" data-strip-for="' + city.id + '">' + segHtml + '</div>' +
+      '</div>';
+  }
+
+  function renderMeetRows() {
+    meetRows.innerHTML = meetSelected.map(cityRowHTML).join("");
+    meetEmptyNote.hidden = meetSelected.length > 1;
+  }
+
+  function updateReadouts() {
+    var instant = instantAt(playheadMin);
+    meetSelected.forEach(function (city) {
+      var hf = localHourFloat(instant, city.tz);
+      var hh = Math.floor(hf), mm = Math.round((hf - hh) * 60);
+      if (mm === 60) { mm = 0; hh = (hh + 1) % 24; }
+      var timeEl = meetRows.querySelector('[data-time-for="' + city.id + '"]');
+      if (timeEl) timeEl.textContent = pad2(hh) + ":" + pad2(mm);
+      var offEl = meetRows.querySelector('[data-offset-for="' + city.id + '"]');
+      if (offEl) offEl.textContent = fmtOffset(tzOffsetMinutes(instant, city.tz));
+      var badgeEl = meetRows.querySelector('[data-day-for="' + city.id + '"]');
+      if (badgeEl) {
+        var shift = dayShift(instant, city.tz, HOME_TZ);
+        badgeEl.hidden = shift === 0;
+        if (shift !== 0) badgeEl.textContent = (shift > 0 ? "+" : "") + shift + "d";
+      }
+    });
+    var homeCity = meetSelected.find(function (c) { return c.isHome; }) || meetSelected[0];
+    if (!homeCity) return;
+    var hf = localHourFloat(instant, homeCity.tz);
+    var hh = Math.floor(hf), mm = Math.round((hf - hh) * 60);
+    if (mm === 60) { mm = 0; hh = (hh + 1) % 24; }
+    meetBigTime.textContent = pad2(hh) + ":" + pad2(mm);
+    meetTimeInput.value = pad2(hh) + ":" + pad2(mm);
+    meetDateSub.textContent = new Intl.DateTimeFormat("en-US", { timeZone: homeCity.tz, weekday: "short", month: "short", day: "numeric" }).format(instant) + " · " + homeCity.name;
+  }
+
+  function layoutMeet() {
+    var strip = meetRows.querySelector(".meet-strip");
+    if (!strip) return;
+    var tRect = meetTimeline.getBoundingClientRect();
+    var sRect = strip.getBoundingClientRect();
+    var left = sRect.left - tRect.left;
+    var width = sRect.width;
+    var totalH = tRect.height;
+    meetDragSurface.style.left = left + "px";
+    meetDragSurface.style.width = width + "px";
+    meetDragSurface.style.height = totalH + "px";
+    meetPlayhead.style.left = ((playheadMin / 1440) * width) + "px";
+    var nm = nowMinutes();
+    if (nm >= 0 && nm <= 1439) {
+      meetNowMarker.hidden = false;
+      meetNowMarker.style.left = (left + (nm / 1440) * width) + "px";
+      meetNowMarker.style.height = totalH + "px";
+    } else {
+      meetNowMarker.hidden = true;
+    }
+  }
+
+  function setPlayheadFromClientX(clientX) {
+    var rect = meetDragSurface.getBoundingClientRect();
+    if (rect.width <= 0) return;
+    var frac = (clientX - rect.left) / rect.width;
+    frac = Math.max(0, Math.min(1, frac));
+    playheadMin = clampPlayhead(Math.round((frac * 1440) / 15) * 15);
+    meetPlayhead.style.left = ((playheadMin / 1440) * rect.width) + "px";
+    updateReadouts();
+  }
+
+  meetDragSurface.addEventListener("pointerdown", function (e) {
+    meetDragging = true;
+    meetDragSurface.setPointerCapture(e.pointerId);
+    setPlayheadFromClientX(e.clientX);
+  });
+  meetDragSurface.addEventListener("pointermove", function (e) {
+    if (!meetDragging) return;
+    setPlayheadFromClientX(e.clientX);
+  });
+  ["pointerup", "pointercancel"].forEach(function (evt) {
+    meetDragSurface.addEventListener(evt, function () { meetDragging = false; });
+  });
+
+  meetNowBtn.addEventListener("click", function () {
+    windowStart = getWindowStart();
+    playheadMin = clampPlayhead(nowMinutes());
+    layoutMeet();
+    updateReadouts();
+  });
+
+  meetTimeInput.addEventListener("change", function () {
+    var val = meetTimeInput.value;
+    if (!val) return;
+    var parts = val.split(":");
+    var hh = parseInt(parts[0], 10), mm = parseInt(parts[1], 10);
+    if (isNaN(hh) || isNaN(mm)) return;
+    playheadMin = clampPlayhead(hh * 60 + mm);
+    layoutMeet();
+    updateReadouts();
+  });
+
+  meetBestBtn.addEventListener("click", function () {
+    var bestScore = -1, bestMin = playheadMin;
+    for (var m = 0; m < 1440; m += 15) {
+      var instant = instantAt(m);
+      var score = 0;
+      for (var i = 0; i < meetSelected.length; i++) {
+        var hf = localHourFloat(instant, meetSelected[i].tz);
+        var b = bucketFor(hf);
+        score += b === "good" ? 2 : (b === "ok" ? 1 : 0);
+      }
+      if (score > bestScore) { bestScore = score; bestMin = m; }
+    }
+    playheadMin = bestMin;
+    layoutMeet();
+    updateReadouts();
+  });
+
+  citySearch.addEventListener("input", function () {
+    var q = citySearch.value.trim().toLowerCase();
+    if (!q) { cityDropdown.hidden = true; cityDropdown.innerHTML = ""; return; }
+    var selectedIds = meetSelected.map(function (c) { return c.id; });
+    var matches = CITY_DB.filter(function (c) {
+      if (selectedIds.indexOf(c.id) !== -1) return false;
+      var n = c.name.toLowerCase();
+      return n.indexOf(q) === 0 || n.indexOf(" " + q) !== -1 || c.country.toLowerCase().indexOf(q) === 0;
+    }).slice(0, 8);
+    cityDropdown.innerHTML = matches.length
+      ? matches.map(function (c) { return '<button type="button" class="city-option" data-id="' + c.id + '"><span>' + c.name + '</span><span class="cmeta">' + c.country + '</span></button>'; }).join("")
+      : '<div class="city-empty">No matching city</div>';
+    cityDropdown.hidden = false;
+  });
+  citySearch.addEventListener("focus", function () {
+    if (citySearch.value.trim()) cityDropdown.hidden = false;
+  });
+  cityDropdown.addEventListener("click", function (e) {
+    var btn = e.target.closest(".city-option");
+    if (!btn) return;
+    var c = CITY_DB.find(function (x) { return x.id === btn.dataset.id; });
+    if (!c) return;
+    meetSelected.push({ id: c.id, name: c.name, country: c.country, tz: c.tz, isHome: false });
+    persistMeetCities();
+    citySearch.value = "";
+    cityDropdown.hidden = true;
+    cityDropdown.innerHTML = "";
+    renderMeetRows();
+    updateReadouts();
+    requestAnimationFrame(layoutMeet);
+  });
+  document.addEventListener("click", function (e) {
+    if (!e.target.closest(".meet-add")) cityDropdown.hidden = true;
+  });
+
+  meetRows.addEventListener("click", function (e) {
+    var btn = e.target.closest(".mcl-del");
+    if (!btn) return;
+    meetSelected = meetSelected.filter(function (c) { return c.id !== btn.dataset.id; });
+    persistMeetCities();
+    renderMeetRows();
+    updateReadouts();
+    requestAnimationFrame(layoutMeet);
+  });
+
+  window.addEventListener("resize", function () {
+    if (!meetView.hidden) layoutMeet();
+  });
+
+  function openMeet() {
+    if (!meetInitialized) {
+      meetSelected = loadMeetCities();
+      windowStart = getWindowStart();
+      playheadMin = clampPlayhead(nowMinutes());
+      meetInitialized = true;
+      buildTicks();
+      renderMeetRows();
+      updateReadouts();
+    } else {
+      var ws = getWindowStart();
+      if (ws.getTime() !== windowStart.getTime()) {
+        windowStart = ws;
+        renderMeetRows();
+        updateReadouts();
+      }
+    }
+    requestAnimationFrame(layoutMeet);
+  }
+
+  // ---------- Setup steppers ----------
+  var LIMITS = {
+    work: { min: 5, max: 3599, step: 5 },
+    rest: { min: 0, max: 3599, step: 5 },
+    reps: { min: 1, max: 99, step: 1 },
+    warn: { min: 0, max: 10, step: 1 }
+  };
+
+  function clamp(v, field) {
+    var l = LIMITS[field];
+    return Math.max(l.min, Math.min(l.max, v));
+  }
+
+  function syncSetupFields() {
+    workVal.textContent = fmt(config.work);
+    restVal.textContent = fmt(config.rest);
+    repsVal.textContent = String(config.reps);
+    warnVal.textContent = config.warn + "s";
+    var total = config.reps * config.work + Math.max(0, config.reps - 1) * config.rest;
+    totalVal.textContent = fmt(total);
+    nameInput.value = config.presetId ? config.name : nameInput.value;
+    renderPresets();
+  }
+
+  function bumpField(field, dir) {
+    var l = LIMITS[field];
+    config[field] = clamp(config[field] + dir * l.step, field);
+    config.presetId = null;
+    persistConfig();
+    syncSetupFields();
+    if (runtime.phase === "idle") {
+      runtime.remainingMs = config.work * 1000;
+      buildRepRow();
+      render();
+    }
+  }
+
+  document.querySelectorAll(".stepper").forEach(function (group) {
+    var field = group.dataset.field;
+    var minus = group.querySelector('[data-dir="-1"]');
+    var plus = group.querySelector('[data-dir="1"]');
+    var holdTimer, holdInterval;
+
+    function startHold(dir) {
+      bumpField(field, dir);
+      clearTimeout(holdTimer);
+      holdTimer = setTimeout(function () {
+        clearInterval(holdInterval);
+        holdInterval = setInterval(function () { bumpField(field, dir); }, 90);
+      }, 450);
+    }
+    function stopHold() { clearTimeout(holdTimer); clearInterval(holdInterval); }
+
+    [[minus, -1], [plus, 1]].forEach(function (pair) {
+      var btn = pair[0], dir = pair[1];
+      btn.addEventListener("pointerdown", function (e) { e.preventDefault(); startHold(dir); });
+      btn.addEventListener("pointerup", stopHold);
+      btn.addEventListener("pointerleave", stopHold);
+      btn.addEventListener("pointercancel", stopHold);
+    });
+  });
+
+  function persistConfig() { saveJSON(LS_CONFIG, config); }
+
+  // ---------- Presets ----------
+  function summarize(p) {
+    return fmt(p.work) + " work · " + fmt(p.rest) + " rest · ×" + p.reps;
+  }
+
+  function renderPresets() {
+    presetList.innerHTML = "";
+    emptyNote.hidden = presets.length > 0;
+    presets.forEach(function (p) {
+      var card = document.createElement("div");
+      card.className = "preset-card" + (config.presetId === p.id ? " active" : "");
+
+      var main = document.createElement("button");
+      main.className = "preset-main";
+      main.innerHTML = '<div class="pname"></div><div class="pmeta"></div>';
+      main.querySelector(".pname").textContent = p.name;
+      main.querySelector(".pmeta").textContent = summarize(p);
+      main.addEventListener("click", function () { loadPreset(p); });
+
+      var del = document.createElement("button");
+      del.className = "preset-del";
+      del.textContent = "✕";
+      del.setAttribute("aria-label", "Delete " + p.name);
+      var confirmTimer = null;
+      del.addEventListener("click", function (e) {
+        e.stopPropagation();
+        if (del.classList.contains("confirm")) {
+          clearTimeout(confirmTimer);
+          deletePreset(p.id);
+        } else {
+          del.classList.add("confirm");
+          del.textContent = "Delete?";
+          confirmTimer = setTimeout(function () {
+            del.classList.remove("confirm");
+            del.textContent = "✕";
+          }, 2500);
+        }
+      });
+
+      card.appendChild(main);
+      card.appendChild(del);
+      presetList.appendChild(card);
+    });
+  }
+
+  function loadPreset(p) {
+    config = { name: p.name, work: p.work, rest: p.rest, reps: p.reps, warn: p.warn, presetId: p.id };
+    persistConfig();
+    resetTimer();
+    buildRepRow();
+    renderPresetLabel();
+    syncSetupFields();
+    tabs[0].click();
+  }
+
+  function deletePreset(id) {
+    presets = presets.filter(function (p) { return p.id !== id; });
+    saveJSON(LS_PRESETS, presets);
+    if (config.presetId === id) config.presetId = null;
+    renderPresets();
+  }
+
+  saveBtn.addEventListener("click", function () {
+    var name = nameInput.value.trim();
+    if (!name) { nameInput.focus(); return; }
+    var existing = presets.find(function (p) { return p.name.toLowerCase() === name.toLowerCase(); });
+    var entry = { id: existing ? existing.id : "p" + Date.now(), name: name, work: config.work, rest: config.rest, reps: config.reps, warn: config.warn };
+    if (existing) {
+      presets = presets.map(function (p) { return p.id === entry.id ? entry : p; });
+    } else {
+      presets.push(entry);
+    }
+    saveJSON(LS_PRESETS, presets);
+    config.name = name;
+    config.presetId = entry.id;
+    persistConfig();
+    renderPresetLabel();
+    renderPresets();
+  });
+
+  // ---------- Init ----------
+  muteBtn.setAttribute("aria-pressed", String(muted));
+  muteBtn.setAttribute("aria-label", muted ? "Unmute sound" : "Mute sound");
+  muteBtn.classList.toggle("on", muted);
+  renderPresetLabel();
+  buildRepRow();
+  render();
+  syncSetupFields();
+})();
+</script>
