@@ -510,6 +510,17 @@
     margin: 0;
   }
   .meet-date-sub { font-size: .82rem; color: var(--muted); font-weight: 600; }
+  .meet-date-pick {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 8px;
+    border-radius: 10px;
+    cursor: pointer;
+  }
+  .meet-date-pick:active, .meet-date-pick:focus-within { background: var(--surface-2); }
+  .meet-date-edit { width: 13px; height: 13px; color: var(--muted); flex: 0 0 auto; }
   .meet-actions { display: flex; gap: 8px; margin-top: 10px; }
   .chip-btn {
     padding: 8px 16px;
@@ -837,7 +848,14 @@
         </svg>
         <input type="time" class="meet-time-input" id="meetTimeInput" step="900" aria-label="Set exact meeting time">
       </div>
-      <div class="meet-date-sub" id="meetDateSub">–</div>
+      <div class="meet-date-pick" id="meetDatePick">
+        <div class="meet-date-sub" id="meetDateSub">–</div>
+        <svg class="meet-date-edit" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <rect x="3" y="5" width="18" height="16" rx="2.5"/>
+          <path d="M3 9.5h18M8 3v4M16 3v4"/>
+        </svg>
+        <input type="date" class="meet-time-input" id="meetDateInput" aria-label="Set meeting date">
+      </div>
       <div class="meet-actions">
         <button class="chip-btn" id="meetNowBtn">Now</button>
         <button class="chip-btn accent" id="meetBestBtn">Best time</button>
@@ -941,6 +959,7 @@
   var meetView = document.getElementById("meetView");
   var meetBigTime = document.getElementById("meetBigTime");
   var meetTimeInput = document.getElementById("meetTimeInput");
+  var meetDateInput = document.getElementById("meetDateInput");
   var meetDateSub = document.getElementById("meetDateSub");
   var meetNowBtn = document.getElementById("meetNowBtn");
   var meetBestBtn = document.getElementById("meetBestBtn");
@@ -1379,6 +1398,8 @@
   var HOME_TZ = (Intl.DateTimeFormat().resolvedOptions().timeZone) || "UTC";
   var meetSelected = [];
   var windowStart = null;
+  var selectedDateStr = null;
+  var followsToday = true;
   var playheadMin = 0;
   var meetInitialized = false;
   var meetDragging = false;
@@ -1413,19 +1434,32 @@
     saveJSON(LS_MEET_CITIES, ids);
   }
 
-  function getWindowStart() {
+  function pad2(n) { return (n < 10 ? "0" : "") + n; }
+
+  function todayStr() {
     var d = new Date();
-    d.setHours(0, 0, 0, 0);
-    return d;
+    return d.getFullYear() + "-" + pad2(d.getMonth() + 1) + "-" + pad2(d.getDate());
   }
 
+  // windowStart is midnight (device-local) of whichever date is selected —
+  // recomputing it from the date string, rather than from "now", is what
+  // lets the whole planner reflect the correct DST offset for that date.
+  function getWindowStart() {
+    var parts = selectedDateStr.split("-");
+    return new Date(+parts[0], +parts[1] - 1, +parts[2], 0, 0, 0, 0);
+  }
+
+  // Minutes from the currently-selected window's midnight to this instant.
+  // Callers that want "now" as a clock time must first point windowStart
+  // at today (see the Now button and the initial-load path) — that's also
+  // what keeps this outside 0..1439, hiding the now-marker, whenever the
+  // selected date isn't today.
   function nowMinutes() {
     return Math.round((Date.now() - windowStart.getTime()) / 60000);
   }
 
   function clampPlayhead(m) { return Math.max(0, Math.min(1439, m)); }
   function instantAt(min) { return new Date(windowStart.getTime() + min * 60000); }
-  function pad2(n) { return (n < 10 ? "0" : "") + n; }
 
   function getTimeFormatter(tz) {
     var key = "t:" + tz;
@@ -1598,9 +1632,27 @@
     meetDragSurface.addEventListener(evt, function () { meetDragging = false; });
   });
 
+  function syncDateInput() { meetDateInput.value = selectedDateStr; }
+
   meetNowBtn.addEventListener("click", function () {
+    var dateChanged = selectedDateStr !== todayStr();
+    selectedDateStr = todayStr();
+    followsToday = true;
     windowStart = getWindowStart();
     playheadMin = clampPlayhead(nowMinutes());
+    syncDateInput();
+    if (dateChanged) renderMeetRows();
+    layoutMeet();
+    updateReadouts();
+  });
+
+  meetDateInput.addEventListener("change", function () {
+    var val = meetDateInput.value;
+    if (!val) return;
+    selectedDateStr = val;
+    followsToday = selectedDateStr === todayStr();
+    windowStart = getWindowStart();
+    renderMeetRows();
     layoutMeet();
     updateReadouts();
   });
@@ -1685,19 +1737,22 @@
   function openMeet() {
     if (!meetInitialized) {
       meetSelected = loadMeetCities();
+      selectedDateStr = todayStr();
       windowStart = getWindowStart();
       playheadMin = clampPlayhead(nowMinutes());
       meetInitialized = true;
       buildTicks();
+      syncDateInput();
       renderMeetRows();
       updateReadouts();
-    } else {
-      var ws = getWindowStart();
-      if (ws.getTime() !== windowStart.getTime()) {
-        windowStart = ws;
-        renderMeetRows();
-        updateReadouts();
-      }
+    } else if (followsToday && selectedDateStr !== todayStr()) {
+      // Midnight passed while the app stayed open, and the user never
+      // pinned a specific date — keep riding today's date forward.
+      selectedDateStr = todayStr();
+      windowStart = getWindowStart();
+      syncDateInput();
+      renderMeetRows();
+      updateReadouts();
     }
     requestAnimationFrame(layoutMeet);
   }
