@@ -1,4 +1,4 @@
-# Rounded
+# TimeFlow
 
 A configurable interval timer for mobile — set work/rest intervals, repetitions, and audio warning cues, save multiple presets, and find the best meeting time across cities with a drag-to-scrub timezone planner.
 
