@@ -195,7 +195,7 @@
     background: radial-gradient(circle, color-mix(in srgb, var(--phase-c) 24%, transparent) 0%, transparent 68%);
     transition: background .3s ease;
   }
-  .ring { width: 100%; height: 100%; transform: rotate(-90deg); }
+  .ring { width: 100%; height: 100%; transform: rotate(-90deg); touch-action: none; }
   .ring-track {
     fill: none;
     stroke: var(--surface-2);
@@ -207,6 +207,39 @@
     stroke-width: 10;
     stroke-linecap: round;
     transition: stroke .25s ease;
+  }
+  .ring-handle {
+    fill: var(--phase-c);
+    stroke: var(--surface);
+    stroke-width: 5;
+    opacity: 0;
+    transition: fill .25s ease, opacity .2s ease;
+  }
+  .app[data-phase="work"] .ring-handle,
+  .app[data-phase="rest"] .ring-handle {
+    opacity: 1;
+    cursor: grab;
+  }
+  .app[data-phase="work"] .ring,
+  .app[data-phase="rest"] .ring {
+    cursor: grab;
+  }
+  .stage.dragging .ring-handle,
+  .stage.dragging .ring {
+    cursor: grabbing;
+  }
+  .stage-hint {
+    font-size: .72rem;
+    color: var(--muted);
+    font-weight: 600;
+    text-align: center;
+    opacity: 0;
+    transition: opacity .2s ease;
+    margin-top: -6px;
+  }
+  .app[data-phase="work"] .stage-hint,
+  .app[data-phase="rest"] .stage-hint {
+    opacity: 1;
   }
   .time-display {
     position: absolute;
@@ -721,8 +754,16 @@
     <div class="topbar-actions">
       <button class="icon-btn" id="settingsBtn" aria-label="Open timer setup">
         <svg class="topbar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <circle cx="12" cy="12" r="3"/>
-          <path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1"/>
+          <circle cx="12" cy="12" r="6.2"/>
+          <circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none"/>
+          <g fill="currentColor" stroke="none">
+            <rect x="18.3" y="10.7" width="3" height="2.6" rx="0.7"/>
+            <rect x="18.3" y="10.7" width="3" height="2.6" rx="0.7" transform="rotate(60 12 12)"/>
+            <rect x="18.3" y="10.7" width="3" height="2.6" rx="0.7" transform="rotate(120 12 12)"/>
+            <rect x="18.3" y="10.7" width="3" height="2.6" rx="0.7" transform="rotate(180 12 12)"/>
+            <rect x="18.3" y="10.7" width="3" height="2.6" rx="0.7" transform="rotate(240 12 12)"/>
+            <rect x="18.3" y="10.7" width="3" height="2.6" rx="0.7" transform="rotate(300 12 12)"/>
+          </g>
         </svg>
       </button>
       <button class="icon-btn" id="muteBtn" aria-pressed="false" aria-label="Toggle sound">
@@ -740,14 +781,16 @@
     <div class="preset-name" id="presetLabel">Custom setup</div>
     <div class="phase-pill" id="phasePill">Ready</div>
 
-    <div class="stage">
+    <div class="stage" id="stage">
       <svg class="ring" viewBox="0 0 300 300" aria-hidden="true">
         <circle class="ring-track" cx="150" cy="150" r="135"></circle>
         <circle class="ring-progress" id="ringProgress" cx="150" cy="150" r="135"
                 stroke-dasharray="848.23" stroke-dashoffset="0"></circle>
+        <circle class="ring-handle" id="ringHandle" cx="285" cy="150" r="10"></circle>
       </svg>
       <div class="time-display" id="timeDisplay">00:45</div>
     </div>
+    <div class="stage-hint" id="stageHint">Drag the dot to adjust</div>
 
     <div class="rep-block">
       <div class="rep-row" id="repRow"></div>
@@ -949,6 +992,8 @@
   var phasePill = document.getElementById("phasePill");
   var timeDisplay = document.getElementById("timeDisplay");
   var ringProgress = document.getElementById("ringProgress");
+  var ringHandle = document.getElementById("ringHandle");
+  var stageEl = document.getElementById("stage");
   var repRow = document.getElementById("repRow");
   var repCaption = document.getElementById("repCaption");
   var nextHint = document.getElementById("nextHint");
@@ -1123,15 +1168,29 @@
     return "Next: Work · " + fmt(config.work);
   }
 
+  // Places the handle at the exact point where the progress ring's dash
+  // pattern ends — same (center + r·cosφ, center + r·sinφ) parametrization
+  // SVG uses internally for the circle, so it lines up with the visible
+  // tip by construction rather than by a separately-tuned angle offset.
+  function positionHandle(remFrac) {
+    var phi = remFrac * 2 * Math.PI;
+    var hx = 150 + RING_R * Math.cos(phi);
+    var hy = 150 + RING_R * Math.sin(phi);
+    ringHandle.setAttribute("cx", hx.toFixed(2));
+    ringHandle.setAttribute("cy", hy.toFixed(2));
+  }
+
   function updateRing() {
     if (runtime.phase === "done") {
       ringProgress.setAttribute("stroke-dashoffset", "0");
+      positionHandle(1);
       return;
     }
     var total = phaseTotalMs();
     var frac = total > 0 ? 1 - (runtime.remainingMs / total) : 1;
     frac = Math.max(0, Math.min(1, frac));
     ringProgress.setAttribute("stroke-dashoffset", (RING_C * frac).toFixed(2));
+    positionHandle(1 - frac);
   }
 
   function updatePillAndTime() {
@@ -1260,6 +1319,53 @@
   });
   resetBtn.addEventListener("click", resetTimer);
   skipBtn.addEventListener("click", skipPhase);
+
+  // ---------- Ring scrub ----------
+  // Lets the current interval's remaining time be dragged forward or back
+  // by grabbing the handle (or anywhere on the ring). Only meaningful mid-
+  // interval, so it's a no-op outside work/rest.
+  var ringDragging = false;
+
+  function remainingFractionFromPoint(clientX, clientY) {
+    var rect = stageEl.getBoundingClientRect();
+    var cx = rect.left + rect.width / 2;
+    var cy = rect.top + rect.height / 2;
+    var dx = clientX - cx;
+    var dy = clientY - cy;
+    var theta = Math.atan2(dx, -dy); // clockwise-from-top, matches positionHandle()
+    if (theta < 0) theta += 2 * Math.PI;
+    return theta / (2 * Math.PI);
+  }
+
+  function scrubTo(clientX, clientY) {
+    if (runtime.phase !== "work" && runtime.phase !== "rest") return;
+    var remFrac = remainingFractionFromPoint(clientX, clientY);
+    var total = phaseTotalMs();
+    var next = Math.round((remFrac * total) / 1000) * 1000;
+    next = Math.max(0, Math.min(total, next));
+    runtime.remainingMs = next;
+    runtime.lastWarnSecond = null;
+    if (runtime.running) runtime.endTime = Date.now() + next;
+    render();
+  }
+
+  stageEl.addEventListener("pointerdown", function (e) {
+    if (runtime.phase !== "work" && runtime.phase !== "rest") return;
+    ringDragging = true;
+    stageEl.classList.add("dragging");
+    scrubTo(e.clientX, e.clientY);
+    try { stageEl.setPointerCapture(e.pointerId); } catch (err) {}
+  });
+  stageEl.addEventListener("pointermove", function (e) {
+    if (!ringDragging) return;
+    scrubTo(e.clientX, e.clientY);
+  });
+  ["pointerup", "pointercancel"].forEach(function (evt) {
+    stageEl.addEventListener(evt, function () {
+      ringDragging = false;
+      stageEl.classList.remove("dragging");
+    });
+  });
 
   muteBtn.addEventListener("click", function () {
     muted = !muted;
