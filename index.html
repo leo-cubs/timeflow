@@ -907,6 +907,14 @@
       <span>Meet</span>
     </button>
   </nav>
+
+  <!-- Silent, invisible looped video: a fallback that keeps the screen
+       awake on iOS versions/contexts where the Wake Lock API is missing
+       or unreliable (notably some home-screen "standalone" PWA cases). -->
+  <video id="noSleepVideo" muted playsinline loop aria-hidden="true"
+         style="position:fixed; width:1px; height:1px; opacity:0; pointer-events:none; left:-10px; top:-10px;"
+         src="data:video/mp4;base64,AAAAIGZ0eXBpc29tAAACAGlzb21pc28yYXZjMW1wNDEAAANMbW9vdgAAAGxtdmhkAAAAAAAAAAAAAAAAAAAD6AAAA+gAAQAAAQAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgAAAnd0cmFrAAAAXHRraGQAAAADAAAAAAAAAAAAAAABAAAAAAAAA+gAAAAAAAAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAABAAAAAAAIAAAACAAAAAAAkZWR0cwAAABxlbHN0AAAAAAAAAAEAAAPoAAAAAAABAAAAAAHvbWRpYQAAACBtZGhkAAAAAAAAAAAAAAAAAAAoAAAAKABVxAAAAAAALWhkbHIAAAAAAAAAAHZpZGUAAAAAAAAAAAAAAABWaWRlb0hhbmRsZXIAAAABmm1pbmYAAAAUdm1oZAAAAAEAAAAAAAAAAAAAACRkaW5mAAAAHGRyZWYAAAAAAAAAAQAAAAx1cmwgAAAAAQAAAVpzdGJsAAAAunN0c2QAAAAAAAAAAQAAAKphdmMxAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAAAAAIAAgBIAAAASAAAAAAAAAABFUxhdmM2MS4xOS4xMDEgbGlieDI2NAAAAAAAAAAAAAAAGP//AAAAMGF2Y0MBQsAe/+EAGGdCwB7ZH4iIwEQAAAMABAAAAwBQPFi5IAEABWjLg8sgAAAAEHBhc3AAAAABAAAAAQAAABRidHJ0AAAAAAAAFqgAAAAAAAAAGHN0dHMAAAAAAAAAAQAAAAoAAAQAAAAAFHN0c3MAAAAAAAAAAQAAAAEAAAAcc3RzYwAAAAAAAAABAAAAAQAAAAoAAAABAAAAPHN0c3oAAAAAAAAAAAAAAAoAAAKDAAAACQAAAAoAAAAJAAAACQAAAAkAAAAJAAAACQAAAAkAAAAJAAAAFHN0Y28AAAAAAAAAAQAAA3wAAABhdWR0YQAAAFltZXRhAAAAAAAAACFoZGxyAAAAAAAAAABtZGlyYXBwbAAAAAAAAAAAAAAAACxpbHN0AAAAJKl0b28AAAAcZGF0YQAAAAEAAAAATGF2ZjYxLjcuMTAwAAAACGZyZWUAAALdbWRhdAAAAnEGBf//bdxF6b3m2Ui3lizYINkj7u94MjY0IC0gY29yZSAxNjQgcjMxMDggMzFlMTlmOSAtIEguMjY0L01QRUctNCBBVkMgY29kZWMgLSBDb3B5bGVmdCAyMDAzLTIwMjMgLSBodHRwOi8vd3d3LnZpZGVvbGFuLm9yZy94MjY0Lmh0bWwgLSBvcHRpb25zOiBjYWJhYz0wIHJlZj0zIGRlYmxvY2s9MTowOjAgYW5hbHlzZT0weDE6MHgxMTEgbWU9aGV4IHN1Ym1lPTcgcHN5PTEgcHN5X3JkPTEuMDA6MC4wMCBtaXhlZF9yZWY9MSBtZV9yYW5nZT0xNiBjaHJvbWFfbWU9MSB0cmVsbGlzPTEgOHg4ZGN0PTAgY3FtPTAgZGVhZHpvbmU9MjEsMTEgZmFzdF9wc2tpcD0xIGNocm9tYV9xcF9vZmZzZXQ9LTIgdGhyZWFkcz0xIGxvb2thaGVhZF90aHJlYWRzPTEgc2xpY2VkX3RocmVhZHM9MCBucj0wIGRlY2ltYXRlPTEgaW50ZXJsYWNlZD0wIGJsdXJheV9jb21wYXQ9MCBjb25zdHJhaW5lZF9pbnRyYT0wIGJmcmFtZXM9MCB3ZWlnaHRwPTAga2V5aW50PTI1MCBrZXlpbnRfbWluPTEwIHNjZW5lY3V0PTQwIGludHJhX3JlZnJlc2g9MCByY19sb29rYWhlYWQ9NDAgcmM9Y3JmIG1idHJlZT0xIGNyZj0yMy4wIHFjb21wPTAuNjAgcXBtaW49MCBxcG1heD02OSBxcHN0ZXA9NCBpcF9yYXRpbz0xLjQwIGFxPTE6MS4wMACAAAAACmWIhA/yYoAAw+4AAAAFQZo4H+oAAAAGQZpUB/qAAAAABUGaYD/UAAAABUGagD/UAAAABUGaoD/UAAAABUGawD/UAAAABUGa4D/UAAAABUGbADvUAAAABUGbIDfU">
+  </video>
 </div>
 
 <script>
@@ -1026,18 +1034,31 @@
   }
 
   // ---------- Wake lock ----------
+  // Two mechanisms run together: the native Wake Lock API where it exists,
+  // plus an always-on silent video loop as a fallback/belt-and-suspenders —
+  // iOS has had real-world cases (particularly home-screen "standalone"
+  // installs) where navigator.wakeLock is present but doesn't actually
+  // stop the screen from locking, so the video keeps things covered.
   var wakeLock = null;
+  var noSleepVideo = document.getElementById("noSleepVideo");
+
   function requestWake() {
-    if (!("wakeLock" in navigator)) return;
-    navigator.wakeLock.request("screen").then(function (wl) {
-      wakeLock = wl;
-    }).catch(function () {});
+    if ("wakeLock" in navigator) {
+      navigator.wakeLock.request("screen").then(function (wl) {
+        wakeLock = wl;
+      }).catch(function () {});
+    }
+    if (noSleepVideo) noSleepVideo.play().catch(function () {});
   }
   function releaseWake() {
     if (wakeLock) { wakeLock.release().catch(function () {}); wakeLock = null; }
+    if (noSleepVideo) { noSleepVideo.pause(); noSleepVideo.currentTime = 0; }
   }
   document.addEventListener("visibilitychange", function () {
-    if (document.visibilityState === "visible" && runtime.running && !wakeLock) requestWake();
+    if (document.visibilityState === "visible" && runtime.running) {
+      if (!wakeLock) requestWake();
+      else if (noSleepVideo && noSleepVideo.paused) noSleepVideo.play().catch(function () {});
+    }
   });
 
   // ---------- Runtime state ----------
